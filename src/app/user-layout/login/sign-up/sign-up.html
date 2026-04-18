@@ -1,0 +1,151 @@
+<div class="auth-page">
+  <div class="auth-card animate-fadeIn">
+    <div class="auth-header">
+      <div class="auth-logo">🛒</div>
+      <h1>{{ otpMode ? (ts.currentLang() === 'ar' ? 'تأكيد الحساب' : 'Verify Account') : ('auth.signup_title' | translate) }}</h1>
+      @if (otpMode) {
+        <p style="text-align: center; color: var(--text-muted); margin-top: 8px;">
+          {{ ts.currentLang() === 'ar' ? 'أدخل الكود المرسل إلى بريدك الإلكتروني' : 'Enter the code sent to your email' }}
+        </p>
+      }
+    </div>
+
+    @if (!otpMode) {
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">{{ 'auth.first_name' | translate }}</label>
+          <input type="text" class="form-input" formControlName="firstName"
+            autocomplete="given-name"
+            maxlength="30"
+            [class.error]="form.get('firstName')?.invalid && form.get('firstName')?.touched">
+          @if (form.get('firstName')?.touched && form.get('firstName')?.hasError('required')) {
+            <span class="form-error">{{ ts.currentLang() === 'ar' ? 'الاسم الأول مطلوب' : 'First name is required' }}</span>
+          }
+          @if (form.get('firstName')?.touched && form.get('firstName')?.hasError('minlength')) {
+            <span class="form-error">{{ ts.currentLang() === 'ar' ? 'حرفان على الأقل' : 'At least 2 characters' }}</span>
+          }
+        </div>
+        <div class="form-group">
+          <label class="form-label">{{ 'auth.last_name' | translate }}</label>
+          <input type="text" class="form-input" formControlName="lastName"
+            autocomplete="family-name"
+            maxlength="30"
+            [class.error]="form.get('lastName')?.invalid && form.get('lastName')?.touched">
+          @if (form.get('lastName')?.touched && form.get('lastName')?.hasError('required')) {
+            <span class="form-error">{{ ts.currentLang() === 'ar' ? 'الاسم الأخير مطلوب' : 'Last name is required' }}</span>
+          }
+          @if (form.get('lastName')?.touched && form.get('lastName')?.hasError('minlength')) {
+            <span class="form-error">{{ ts.currentLang() === 'ar' ? 'حرفان على الأقل' : 'At least 2 characters' }}</span>
+          }
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">{{ 'auth.email' | translate }}</label>
+        <input type="email" class="form-input" formControlName="email" dir="ltr"
+          autocomplete="email"
+          [placeholder]="'example@email.com'"
+          [class.error]="form.get('email')?.invalid && form.get('email')?.touched">
+        @if (form.get('email')?.touched && form.get('email')?.hasError('required')) {
+          <span class="form-error">{{ ts.currentLang() === 'ar' ? 'البريد الإلكتروني مطلوب' : 'Email is required' }}</span>
+        }
+        @if (form.get('email')?.touched && form.get('email')?.hasError('email') && !form.get('email')?.hasError('required')) {
+          <span class="form-error">{{ ts.currentLang() === 'ar' ? 'صيغة البريد غير صحيحة' : 'Invalid email format' }}</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">{{ 'auth.governorate' | translate }}</label>
+        <select class="form-select" formControlName="governorate"
+          [class.error]="form.get('governorate')?.invalid && form.get('governorate')?.touched">
+          <option value="">{{ 'checkout.select_governorate' | translate }}</option>
+          @for (gov of governorates; track gov.en) {
+            <option [value]="gov.en">{{ ts.currentLang() === 'ar' ? gov.ar : gov.en }}</option>
+          }
+        </select>
+        @if (form.get('governorate')?.touched && form.get('governorate')?.hasError('required')) {
+          <span class="form-error">{{ ts.currentLang() === 'ar' ? 'المحافظة مطلوبة' : 'Governorate is required' }}</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">{{ 'auth.phone' | translate }}</label>
+        <div class="phone-wrapper">
+          <span class="phone-prefix">+20</span>
+          <input type="tel" class="form-input phone-input" formControlName="phone" dir="ltr"
+            placeholder="1XXXXXXXXX"
+            maxlength="11"
+            [class.error]="form.get('phone')?.invalid && form.get('phone')?.touched">
+        </div>
+        @if (form.get('phone')?.touched && form.get('phone')?.hasError('required')) {
+          <span class="form-error">{{ ts.currentLang() === 'ar' ? 'رقم الهاتف مطلوب' : 'Phone number is required' }}</span>
+        }
+        @if (form.get('phone')?.touched && form.get('phone')?.hasError('pattern') && !form.get('phone')?.hasError('required')) {
+          <span class="form-error">{{ ts.currentLang() === 'ar' ? 'رقم هاتف غير صحيح (10-11 رقم)' : 'Invalid phone (10-11 digits)' }}</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">{{ 'auth.password' | translate }}</label>
+        <div class="password-wrapper">
+          <input [type]="showPassword ? 'text' : 'password'" class="form-input" formControlName="password"
+            autocomplete="new-password"
+            [class.error]="form.get('password')?.invalid && form.get('password')?.touched">
+          <button type="button" class="toggle-pass" (click)="showPassword = !showPassword">
+            {{ showPassword ? '🙈' : '👁️' }}
+          </button>
+        </div>
+        @if (form.get('password')?.touched && form.get('password')?.hasError('required')) {
+          <span class="form-error">{{ ts.currentLang() === 'ar' ? 'كلمة المرور مطلوبة' : 'Password is required' }}</span>
+        }
+        @if (form.get('password')?.touched && form.get('password')?.hasError('minlength') && !form.get('password')?.hasError('required')) {
+          <span class="form-error">{{ ts.currentLang() === 'ar' ? 'كلمة المرور يجب أن تكون 8 أحرف على الأقل' : 'Password must be at least 8 characters' }}</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">{{ 'auth.confirm_password' | translate }}</label>
+        <div class="password-wrapper">
+          <input [type]="showRePassword ? 'text' : 'password'" class="form-input" formControlName="rePassword"
+            autocomplete="new-password"
+            [class.error]="form.get('rePassword')?.hasError('mismatch') && form.get('rePassword')?.touched">
+          <button type="button" class="toggle-pass" (click)="showRePassword = !showRePassword">
+            {{ showRePassword ? '🙈' : '👁️' }}
+          </button>
+        </div>
+        @if (form.get('rePassword')?.touched && form.get('rePassword')?.hasError('required')) {
+          <span class="form-error">{{ ts.currentLang() === 'ar' ? 'تأكيد كلمة المرور مطلوب' : 'Password confirmation is required' }}</span>
+        }
+        @if (form.get('rePassword')?.hasError('mismatch') && form.get('rePassword')?.touched) {
+          <span class="form-error">{{ ts.currentLang() === 'ar' ? 'كلمة المرور غير متطابقة' : 'Passwords do not match' }}</span>
+        }
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-lg submit-btn" [disabled]="isLoading">
+        @if (isLoading) { <span class="spinner"></span> }
+        {{ 'auth.signup_btn' | translate }}
+      </button>
+    </form>
+
+    <p class="auth-footer">
+      {{ 'auth.have_account' | translate }}
+      <a routerLink="/login/signin">{{ 'auth.login_btn' | translate }}</a>
+    </p>
+    } @else {
+      <!-- OTP Form -->
+      <div style="text-align: center; margin-top: 20px;">
+        <div class="form-group">
+          <input type="text" class="form-input" [(ngModel)]="otpCode" placeholder="123456" dir="ltr" style="font-size: 24px; text-align: center; letter-spacing: 4px; padding: 16px; margin-bottom: 20px;">
+        </div>
+        <button type="button" class="btn btn-primary submit-btn w-100" style="margin-bottom: 12px;" (click)="verifyAccount()" [disabled]="!otpCode || otpCode.length < 5 || verifying">
+          @if (verifying) { <span class="spinner"></span> }
+          {{ verifying ? (ts.currentLang() === 'ar' ? 'جاري التحقق...' : 'Verifying...') : (ts.currentLang() === 'ar' ? 'تأكيد الحساب' : 'Verify Account') }}
+        </button>
+        <button type="button" class="btn" style="width: 100%; border: none; background: transparent; color: var(--primary); cursor: pointer;" (click)="resendCode()">
+          {{ ts.currentLang() === 'ar' ? 'إعادة إرسال الكود' : 'Resend Code' }}
+        </button>
+      </div>
+    }
+  </div>
+</div>

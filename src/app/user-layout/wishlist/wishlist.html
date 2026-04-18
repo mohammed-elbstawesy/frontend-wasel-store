@@ -1,0 +1,76 @@
+<div class="container page">
+  <div class="page-header">
+    <h1 class="page-title">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="color: var(--price);">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+      </svg>
+      {{ ts.currentLang() === 'ar' ? 'المفضلة' : 'Wishlist' }}
+    </h1>
+    <p class="page-subtitle">
+      {{ ts.currentLang() === 'ar'
+        ? 'المنتجات اللي حبيتها وعايز ترجعلها بعدين'
+        : 'Products you loved and want to come back to' }}
+      <span class="wishlist-count">({{ wishlistService.getItems().length }})</span>
+    </p>
+  </div>
+
+  @if (wishlistService.getItems().length === 0) {
+  <div class="empty-state">
+    <div class="empty-icon">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+      </svg>
+    </div>
+    <h3>{{ ts.currentLang() === 'ar' ? 'المفضلة فارغة' : 'Your wishlist is empty' }}</h3>
+    <p>{{ ts.currentLang() === 'ar' ? 'ابحث عن منتجات واضغط على القلب لإضافتها هنا' : 'Browse products and tap the heart to save them here' }}</p>
+    <a routerLink="/products" class="btn-browse">
+      {{ ts.currentLang() === 'ar' ? 'تصفح المنتجات' : 'Browse Products' }}
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+    </a>
+  </div>
+  } @else {
+  <div class="wishlist-grid">
+    @for (product of wishlistService.getItems(); track product._id) {
+    <div class="wishlist-card animate-fadeIn">
+      <button class="remove-wish-btn" (click)="removeFromWishlist(product)" [title]="ts.currentLang() === 'ar' ? 'إزالة' : 'Remove'">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+      <a [routerLink]="['/product', product._id]" class="wish-img-link">
+        <div class="wish-img-wrap">
+          <img [src]="product.images[0] | imgUrl" [alt]="ts.localize(product.name)" appFallbackImage>
+        </div>
+        @if (product.discountPercentage && product.discountPercentage > 0) {
+          <span class="discount-badge-premium card-badge-pos">-{{ product.discountPercentage }}%</span>
+        }
+        @if (product.stock === 0) {
+        <span class="wish-out-of-stock">{{ ts.currentLang() === 'ar' ? 'نفدت الكمية' : 'Out of Stock' }}</span>
+        }
+      </a>
+      <div class="wish-info">
+        <a [routerLink]="['/product', product._id]">
+          <h3 class="wish-name">{{ ts.localize(product.name) }}</h3>
+        </a>
+        <div class="wish-bottom">
+          <div class="wish-price price-display">
+            @if (product.discountPercentage && product.discountPercentage > 0) {
+              <span class="price-original">
+                {{ formatPrice(getDisplayPrice(product)) }}
+              </span>
+              <span class="price-final">
+                {{ formatPrice(getDiscountedPrice(getDisplayPrice(product), product.discountPercentage)) }}
+              </span>
+            } @else {
+              <span class="price-final">{{ formatPrice(getDisplayPrice(product)) }}</span>
+            }
+            <span class="currency-tag">{{ 'product.egp' | translate }}</span>
+          </div>
+          <button class="wish-cart-btn" (click)="addToCart(product)" [disabled]="product.stock === 0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    }
+  </div>
+  }
+</div>

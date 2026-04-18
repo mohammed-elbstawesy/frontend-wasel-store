@@ -1,0 +1,127 @@
+<div class="container page">
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a routerLink="/">{{ 'nav.home' | translate }}</a>
+    <span class="sep">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </span>
+    <a routerLink="/categories">{{ 'nav.categories' | translate }}</a>
+    <span class="sep">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </span>
+    <span class="current">{{ category ? ts.localize(category.name) : '' }}</span>
+  </div>
+
+  <div class="page-header">
+    <h1 class="page-title">{{ category ? ts.localize(category.name) : '' }}</h1>
+    <div class="header-controls">
+      <div class="search-wrapper">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input
+          type="text"
+          class="search-input"
+          [(ngModel)]="searchQuery"
+          (ngModelChange)="onSearchChange()"
+          [placeholder]="ts.currentLang() === 'ar' ? 'بحث ...' : 'Search ...'"
+        >
+        @if (searchQuery) {
+          <button class="search-clear" (click)="searchQuery = ''; onSearchChange()">✕</button>
+        }
+      </div>
+      <div class="sort-wrapper">
+        <select class="form-select sort-select" (change)="onSortChange($event)">
+          <option value="newest">{{ 'product.newest' | translate }}</option>
+          <option value="price_low">{{ 'product.price_low' | translate }}</option>
+          <option value="price_high">{{ 'product.price_high' | translate }}</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sub-category Tabs -->
+  @if (category && category.subCategories.length > 0) {
+    <div class="sub-tabs-wrapper">
+      <div class="sub-tabs">
+        <button class="tab" [class.active]="activeSubCat === 'all'" (click)="filterBySubCategory('all')">
+          {{ ts.currentLang() === 'ar' ? 'الكل' : 'All' }}
+        </button>
+        @for (sub of category.subCategories; track sub._id) {
+          <button class="tab" [class.active]="activeSubCat === sub._id" (click)="filterBySubCategory(sub._id)">
+            {{ ts.localize(sub.name) }}
+          </button>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Products -->
+  @if (filteredProducts.length > 0) {
+    <div class="products-grid">
+      @for (product of filteredProducts; track product._id) {
+        <div class="product-card animate-fadeIn">
+          <button class="wishlist-btn-card" (click)="$event.preventDefault(); toggleWishlist(product)"
+            [class.active]="wishlistService.isInWishlist(product._id)" [title]="ts.currentLang() === 'ar' ? 'أضف للمفضلة' : 'Add to Wishlist'">
+            <svg width="20" height="20" viewBox="0 0 24 24" [attr.fill]="wishlistService.isInWishlist(product._id) ? 'currentColor' : 'none'"
+              stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </button>
+          <a [routerLink]="['/product', product._id]" class="product-img-link">
+            <div class="img-wrap">
+              <img [src]="product.images[0] | imgUrl" [alt]="ts.localize(product.name)" class="product-img">
+            </div>
+            @if (product.stock === 0) {
+              <span class="out-of-stock-badge">{{ 'product.out_of_stock' | translate }}</span>
+            } @else if (product.stock <= 5) {
+              <span class="low-stock-badge">{{ ts.currentLang() === 'ar' ? 'كمية محدودة' : 'Low Stock' }}</span>
+            }
+            @if (product.discountPercentage && product.discountPercentage > 0) {
+              <span class="discount-badge-premium card-badge-pos">-{{ product.discountPercentage }}%</span>
+            }
+          </a>
+          <div class="product-info">
+            <a [routerLink]="['/product', product._id]">
+              <h3 class="product-name">{{ ts.localize(product.name) }}</h3>
+            </a>
+            @if (product.sizes && product.sizes.length > 0) {
+              <p class="product-sizes">
+                {{ getAvailableSize(product)?.label }}
+                @if (product.sizes.length > 1) {
+                  <span class="more-sizes-badge">
+                    +{{ product.sizes.length - 1 }} {{ ts.currentLang() === 'ar' ? 'أحجام' : 'sizes' }}
+                  </span>
+                }
+              </p>
+            } @else {
+              <p class="product-sizes" style="opacity: 0;">-</p>
+            }
+            <div class="product-bottom">
+              <div class="product-price price-display">
+              @if (product.discountPercentage && product.discountPercentage > 0) {
+                <span class="price-original">
+                  {{ formatPrice(getDisplayPrice(product)) }}
+                </span>
+                <span class="price-final">
+                  {{ formatPrice(getDiscountedPrice(getDisplayPrice(product), product.discountPercentage)) }}
+                </span>
+              } @else {
+                <span class="price-final">{{ formatPrice(getDisplayPrice(product)) }}</span>
+              }
+              <span class="currency-tag">{{ 'product.egp' | translate }}</span>
+            </div>
+              <button class="cart-btn-icon" (click)="addToCart(product)" [disabled]="product.stock === 0" title="{{ 'product.add_to_cart' | translate }}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="empty-state animate-fadeIn">
+      <div class="empty-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      </div>
+      <h3>{{ 'product.no_products' | translate }}</h3>
+      <p>{{ ts.currentLang() === 'ar' ? 'لم يتم العثور على منتجات في هذا القسم حاليا.' : 'No products found in this category right now.' }}</p>
+    </div>
+  }
+</div>

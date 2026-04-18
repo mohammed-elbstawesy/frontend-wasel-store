@@ -1,0 +1,251 @@
+<div class="container page">
+  <div class="profile-header">
+    <h1 class="page-title">{{ ts.currentLang() === 'ar' ? 'حسابي' : 'My Profile' }}</h1>
+    <a class="btn btn-ghost btn-sm" (click)="routehome()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><path d="m15 18-6-6 6-6"/></svg>
+      {{ ts.currentLang() === 'ar' ? 'العودة للرئيسية' : 'Back to Home' }}
+    </a>
+  </div>
+
+  <div class="profile-layout">
+    <!-- Sidebar / Avatar card -->
+    <div class="profile-sidebar card">
+      <div class="sidebar-cover"></div>
+      <div class="avatar-container-wrap">
+        <div class="avatar-wrap">
+          <div class="avatar" (click)="openPhotoViewer()" title="Edit Profile Picture">
+            <img [src]="user.image ? (user.image | imgUrl) : ''" [alt]="user.firstName + ' ' + user.lastName" style="width:100%; height:100%; object-fit:cover; border-radius:50%">
+            <div class="edit-badge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            </div>
+          </div>
+          <div class="status-indicator"></div>
+        </div>
+      </div>
+      
+      <div class="sidebar-info-wrap">
+        <h2 class="user-name">{{ user.firstName }} {{ user.lastName }}</h2>
+        <p class="user-role">{{ user.role === 'user' ? (ts.currentLang() === 'ar' ? 'حساب عميل' : 'Customer Account') : (ts.currentLang() === 'ar' ? 'مدير النظام' : 'Administrator') }}</p>
+        <div class="location-info">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          {{ user.governorate || (ts.currentLang() === 'ar' ? 'موقع غير معروف' : 'Unknown Location') }}
+        </div>
+
+        <div class="sidebar-actions">
+          <!-- Mobile only Orders Button -->
+          <a routerLink="/my-orders" class="btn btn-outline btn-sm mobile-orders-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+            {{ ts.currentLang() === 'ar' ? 'طلباتي' : 'My Orders' }}
+          </a>
+
+          @if (user.role === 'admin') {
+            <a routerLink="/dashboard" class="btn btn-primary btn-sm dash-mobile-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+              {{ ts.currentLang() === 'ar' ? 'لوحة التحكم' : 'Dashboard' }}
+            </a>
+          }
+          
+          
+          <button class="btn btn-outline btn-sm text-danger logout-profile-btn" (click)="logoutUser()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+            {{ ts.currentLang() === 'ar' ? 'تسجيل الخروج' : 'Logout' }}
+          </button>
+
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="profile-main card">
+      
+      @if (!isEditMode) {
+        <div class="main-header">
+          <h3>{{ ts.currentLang() === 'ar' ? 'المعلومات الشخصية' : 'Personal Information' }}</h3>
+          <button class="btn btn-outline btn-sm action-btn" (click)="enableEdit()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>
+            {{ ts.currentLang() === 'ar' ? 'تعديل' : 'Edit Profile' }}
+          </button>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">{{ ts.currentLang() === 'ar' ? 'الاسم الأول' : 'First Name' }}</span>
+            <p class="info-value">{{ user.firstName }}</p>
+          </div>
+          <div class="info-item">
+            <span class="info-label">{{ ts.currentLang() === 'ar' ? 'الاسم الأخير' : 'Last Name' }}</span>
+            <p class="info-value">{{ user.lastName }}</p>
+          </div>
+          <div class="info-item full-width">
+            <span class="info-label">{{ ts.currentLang() === 'ar' ? 'البريد الإلكتروني' : 'Email Address' }}</span>
+            <p class="info-value">{{ user.email }}</p>
+          </div>
+          <div class="info-item">
+            <span class="info-label">{{ ts.currentLang() === 'ar' ? 'رقم الهاتف' : 'Phone Number' }}</span>
+            <p class="info-value" dir="ltr" style="text-align: left;">{{ user.phone }}</p>
+          </div>
+          <div class="info-item">
+            <span class="info-label">{{ ts.currentLang() === 'ar' ? 'المحافظة' : 'Governorate' }}</span>
+            <p class="info-value">{{ user.governorate }}</p>
+          </div>
+        </div>
+      } @else {
+        <div class="main-header">
+          <h3>{{ ts.currentLang() === 'ar' ? 'تعديل المعلومات' : 'Edit Information' }}</h3>
+        </div>
+
+        <form [formGroup]="profileForm" (ngSubmit)="onSubmit()" class="edit-form">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">{{ ts.currentLang() === 'ar' ? 'الاسم الأول' : 'First Name' }}</label>
+              <input type="text" formControlName="firstName" class="form-input">
+            </div>
+            <div class="form-group">
+              <label class="form-label">{{ ts.currentLang() === 'ar' ? 'الاسم الأخير' : 'Last Name' }}</label>
+              <input type="text" formControlName="lastName" class="form-input">
+            </div>
+            <div class="form-group">
+              <label class="form-label">{{ ts.currentLang() === 'ar' ? 'رقم الهاتف' : 'Phone Number' }}</label>
+              <input type="text" formControlName="phone" class="form-input" dir="ltr">
+            </div>
+            <div class="form-group">
+              <label class="form-label">{{ ts.currentLang() === 'ar' ? 'المحافظة' : 'Governorate' }}</label>
+              <input type="text" formControlName="governorate" class="form-input">
+            </div>
+
+            <!-- Password -->
+            <div class="form-group full-width">
+              <label class="form-label">{{ ts.currentLang() === 'ar' ? 'كلمة المرور الجديدة (اختياري)' : 'New Password (Optional)' }}</label>
+              <div class="password-wrapper">
+                <input [type]="showPassword ? 'text' : 'password'" formControlName="password" class="form-input pwd-input" [placeholder]="ts.currentLang() === 'ar' ? 'اتركه فارغاً للحفاظ على الكلمة الحالية' : 'Leave empty to keep current'">
+                <button type="button" class="toggle-pwd" (click)="togglePasswordVisibility()">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+              @if (pass?.invalid && (pass?.dirty || pass?.touched)) {
+                <div class="pwd-requirements">
+                  <span [class.valid]="hasMinLength()">• 8+ chars</span>
+                  <span [class.valid]="hasUpperCase()">• 1 upper</span>
+                  <span [class.valid]="hasLowerCase()">• 1 lower</span>
+                  <span [class.valid]="hasNumber()">• 1 number</span>
+                  <span [class.valid]="hasSpecial()">• 1 special</span>
+                </div>
+              }
+            </div>
+
+            <!-- Confirm -->
+            <div class="form-group full-width">
+              <label class="form-label">{{ ts.currentLang() === 'ar' ? 'تأكيد كلمة المرور' : 'Confirm Password' }}</label>
+              <div class="password-wrapper">
+                <input [type]="showConfirmPassword ? 'text' : 'password'" formControlName="confirmPassword" class="form-input pwd-input">
+                <button type="button" class="toggle-pwd" (click)="toggleConfirmPasswordVisibility()">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+              @if (profileForm.get('confirmPassword')?.touched && profileForm.hasError('mismatch')) {
+                <div class="form-error visible">{{ ts.currentLang() === 'ar' ? 'كلمات المرور غير متطابقة' : 'Passwords do not match!' }}</div>
+              }
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" (click)="cancelEdit()" class="btn btn-ghost">{{ ts.currentLang() === 'ar' ? 'إلغاء' : 'Cancel' }}</button>
+            <button type="submit" [disabled]="profileForm.invalid" class="btn btn-primary px-8">{{ ts.currentLang() === 'ar' ? 'حفظ التغييرات' : 'Save Changes' }}</button>
+          </div>
+        </form>
+      }
+    </div>
+  </div>
+</div>
+
+@if (isPhotoViewerOpen) {
+  <div class="cropper-modal-overlay">
+    <div class="viewer-modal">
+      <div class="modal-header viewer-header">
+        <h3>{{ ts.currentLang() === 'ar' ? 'صورة الملف الشخصي' : 'Profile photo' }}</h3>
+        <button class="close-btn" (click)="closePhotoViewer()">×</button>
+      </div>
+      
+      <div class="viewer-body">
+        <div class="viewer-avatar-container">
+          <img [src]="user.image ? (user.image | imgUrl) : ''" alt="Profile Layout" class="large-avatar-preview">
+        </div>
+      </div>
+
+      <div class="viewer-footer">
+        <div class="viewer-actions-left">
+          <button class="action-btn" (click)="editCurrentPhoto()" *ngIf="user.image">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            <span>{{ ts.currentLang() === 'ar' ? 'تعديل' : 'Edit' }}</span>
+          </button>
+          
+          <label class="action-btn">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <span>{{ ts.currentLang() === 'ar' ? 'تحديث' : 'Update' }}</span>
+            <input type="file" style="display:none" accept="image/*" (change)="fileChangeEvent($event)">
+          </label>
+        </div>
+
+        <div class="viewer-actions-right">
+          <button class="action-btn delete-btn" (click)="deletePhoto()" *ngIf="user.image">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            <span>{{ ts.currentLang() === 'ar' ? 'حذف' : 'Delete' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+@if (isCropperModalOpen) {
+  <div class="cropper-modal-overlay">
+    <div class="cropper-modal cropper-modal-wide">
+      <div class="modal-header">
+        <h3>{{ ts.currentLang() === 'ar' ? 'تعديل الصورة' : 'Edit image' }}</h3>
+        <button class="close-btn" (click)="closeCropperModal()">×</button>
+      </div>
+      
+      <div class="modal-body cropper-layout">
+        <div class="cropper-area">
+          <image-cropper
+            [imageChangedEvent]="imageChangedEvent"
+            [imageURL]="imageURL"
+            [maintainAspectRatio]="true"
+            [aspectRatio]="1 / 1"
+            [roundCropper]="true"
+            [resizeToWidth]="400"
+            [transform]="transform"
+            format="png"
+            style="max-height: 400px"
+            (imageCropped)="imageCropped($event)"
+          ></image-cropper>
+        </div>
+        
+        <div class="cropper-controls">
+          <div class="control-tabs">
+            <span class="active-tab">{{ ts.currentLang() === 'ar' ? 'قص' : 'Crop' }}</span>
+          </div>
+          
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>{{ ts.currentLang() === 'ar' ? 'تكبير / تصغير' : 'Zoom' }}</span>
+            </div>
+            <input type="range" class="custom-range" min="1" max="3" step="0.1" [value]="zoomValue" (input)="updateZoom($event)">
+          </div>
+
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button class="btn btn-primary rounded-pill" (click)="confirmCropAndUpload()" [disabled]="isUploadingPicture">
+          @if (isUploadingPicture) {
+            {{ ts.currentLang() === 'ar' ? 'جاري الحفظ...' : 'Saving...' }}
+          } @else {
+            {{ ts.currentLang() === 'ar' ? 'حفظ التغييرات' : 'Save changes' }}
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}

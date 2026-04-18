@@ -1,0 +1,124 @@
+/* ================================================
+   Footer — Midnight Gold Theme
+   ================================================ */
+
+.site-footer {
+  background: linear-gradient(180deg, #0d0d18 0%, #060610 100%);
+  color: var(--text-secondary);
+  padding: 64px 0 0;
+  margin-top: auto;
+  border-top: 3px solid var(--primary);
+}
+
+:host-context([data-theme="light"]) .site-footer {
+  background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 40px;
+  padding-bottom: 40px;
+}
+
+@media (min-width: 640px) {
+  .footer-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .footer-grid {
+    grid-template-columns: 2fr 1fr 1fr 1.5fr;
+    gap: 48px;
+  }
+}
+
+.footer-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 16px;
+}
+
+.footer-logo .logo-icon {
+  font-size: 28px;
+}
+
+.footer-desc {
+  font-size: 14px;
+  line-height: 1.8;
+   color: rgba(255, 255, 255, 0.7);
+  max-width: 320px;
+}
+
+.footer-col h4 {
+  color: #e8e8ef;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  position: relative;
+  display: inline-block;
+}
+
+.footer-col h4::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -6px;
+  width: 24px;
+  height: 2px;
+  background: var(--primary);
+  border-radius: 2px;
+}
+[dir="rtl"] .footer-col h4::after {
+  left: auto;
+  right: 0;
+}
+
+.footer-links, .footer-contact {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footer-links a {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  transition: all 0.2s;
+  display: inline-block;
+}
+
+.footer-links a:hover {
+  color: var(--primary);
+  transform: translateX(4px);
+}
+[dir="rtl"] .footer-links a:hover {
+  transform: translateX(-4px);
+}
+
+.footer-contact li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+   color: rgba(255, 255, 255, 0.7);
+}
+
+.footer-contact svg {
+  color: var(--primary);
+}
+
+.footer-bottom {
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding: 24px 0;
+  text-align: center;
+   color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+}

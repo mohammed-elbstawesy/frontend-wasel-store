@@ -1,0 +1,271 @@
+@if (product) {
+<div class="pd-page animate-fadeIn">
+  <div class="container">
+
+    <!-- Breadcrumb -->
+    <nav class="pd-breadcrumb">
+      <a routerLink="/" class="bc-link">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        {{ 'nav.home' | translate }}
+      </a>
+      <svg class="bc-sep" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="9 18 15 12 9 6"/></svg>
+      <a routerLink="/categories" class="bc-link">{{ 'nav.categories' | translate }}</a>
+      <svg class="bc-sep" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="9 18 15 12 9 6"/></svg>
+      <span class="bc-current">{{ ts.localize(product.name) }}</span>
+    </nav>
+
+    <!-- Main Product Grid -->
+    <div class="pd-grid">
+
+      <!-- LEFT: Product Image Gallery -->
+      <div class="pd-gallery">
+        <div class="pd-image-main">
+          @if (product.images[0]) {
+            <img [src]="product.images[0] | imgUrl" [alt]="ts.localize(product.name)" class="pd-img">
+          } @else {
+            <div class="pd-img-placeholder">
+              <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10 2v7.31"/><path d="M14 9.3V1.99"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 1 1-4 0"/><path d="M5.52 16h12.96"/>
+              </svg>
+            </div>
+          }
+          <!-- Stock overlay badge: only show if Out of Stock or Low Stock (<= 5) -->
+          @if (product.stock <= 5) {
+            <div class="pd-stock-overlay" [ngClass]="product.stock === 0 ? 'out-of-stock' : 'low-stock'">
+              <span class="stock-dot"></span>
+              {{ product.stock === 0 ? ('product.out_of_stock' | translate) : (ts.currentLang() === 'ar' ? 'كمية محدودة القابلة للبيع' : 'Low Stock') }}
+            </div>
+          }
+        </div>
+        <!-- Thumbnail strip (for future multi-image) -->
+        @if (product.images.length > 1) {
+          <div class="pd-thumbs">
+            @for (img of product.images; track img; let i = $index) {
+              <button class="pd-thumb" [class.active]="i === 0">
+                <img [src]="img | imgUrl" [alt]="'Thumbnail ' + (i+1)">
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- RIGHT: Product Info -->
+      <div class="pd-info">
+        <!-- Title + Badge -->
+        <div class="pd-header">
+          <h1 class="pd-title">{{ ts.localize(product.name) }}</h1>
+          <button class="wishlist-btn-main" (click)="toggleWishlist(product)"
+            [class.active]="wishlistService.isInWishlist(product._id)" [title]="ts.currentLang() === 'ar' ? 'أضف للمفضلة' : 'Add to Wishlist'">
+            <svg width="24" height="24" viewBox="0 0 24 24" [attr.fill]="wishlistService.isInWishlist(product._id) ? 'currentColor' : 'none'"
+              stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            <span class="wishlist-text">{{ wishlistService.isInWishlist(product._id) ?
+              (ts.currentLang() === 'ar' ? 'محفوظة' : 'Saved') :
+              (ts.currentLang() === 'ar' ? 'حفظ' : 'Save') }}</span>
+          </button>
+        </div>
+
+        <!-- Price highlight -->
+        <div class="pd-price-box">
+          <span class="pd-price-label">{{ ts.currentLang() === 'ar' ? 'السعر' : 'Price' }}</span>
+          <div class="pd-price-row price-display">
+            @if (product.discountPercentage && product.discountPercentage > 0) {
+              <span class="price-original">
+                {{ formatPrice(product.sizes?.length && selectedSize ? selectedSize.price : product.price) }}
+              </span>
+              <span class="price-final">
+                {{ formatPrice(getDiscountedPrice(product.sizes?.length && selectedSize ? selectedSize.price : product.price, product.discountPercentage)) }}
+              </span>
+            } @else {
+              <span class="price-final">{{ formatPrice(product.sizes?.length && selectedSize ? selectedSize.price : product.price) }}</span>
+            }
+            <span class="currency-tag">{{ 'product.egp' | translate }}</span>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <p class="pd-description">{{ ts.localize(product.description) }}</p>
+
+
+
+        <!-- Size Selection -->
+        @if (product.sizes && product.sizes.length > 0) {
+          <div class="pd-section">
+            <h3 class="pd-section-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+              {{ 'product.size' | translate }}
+            </h3>
+            <div class="pd-sizes">
+              @for (size of product.sizes; track size.label) {
+                <button
+                  class="pd-size-card"
+                  [class.active]="selectedSize?.label === size.label"
+                  [class.out-of-stock-size]="size.stock === 0"
+                  [disabled]="size.stock === 0"
+                  (click)="selectSize(size)"
+                >
+                  <span class="pd-size-tests">
+                    {{ size.label }}
+                  </span>
+                  <span class="pd-size-price price-display">
+                     @if (product.discountPercentage && product.discountPercentage > 0) {
+                        <span class="price-final">{{ formatPrice(getDiscountedPrice(size.price, product.discountPercentage)) }}</span>
+                        <small class="currency-tag">{{ 'product.egp' | translate }}</small>
+                     } @else {
+                        <span class="price-final">{{ formatPrice(size.price) }}</span>
+                        <small class="currency-tag">{{ 'product.egp' | translate }}</small>
+                     }
+                  </span>
+                  @if (size.stock === 0) {
+                    <span class="pd-size-oos">{{ ts.currentLang() === 'ar' ? 'نفذ' : 'Out of Stock' }}</span>
+                  }
+                  @if (selectedSize?.label === size.label) {
+                    <span class="pd-size-check">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    </span>
+                  }
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Quantity + Add to Cart -->
+        @if (product.isDeleted) {
+          <div class="pd-actions" style="background: rgba(220, 38, 38, 0.05); padding: 16px; border-radius: 12px; border: 1px dashed rgba(220, 38, 38, 0.3);">
+            <h4 style="color: #dc2626; margin: 0 0 8px 0; font-weight: 700; display:flex; align-items:center; gap:8px;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {{ ts.currentLang() === 'ar' ? 'هذا المنتج لم يعد متاحاً' : 'This product is no longer available' }}
+            </h4>
+            <p style="margin:0; font-size: 13px; color: #4b5563;">{{ ts.currentLang() === 'ar' ? 'نعتذر، لقد تم إيقاف أو حذف هذا المنتج من قبل الإدارة ولا يمكن طلبه حالياً.' : 'Sorry, this product has been discontinued and cannot be ordered.' }}</p>
+          </div>
+        } @else {
+          <div class="pd-actions">
+            <div class="pd-qty-wrap">
+              <div style="display:flex; align-items:center; gap: 8px;">
+                 <span class="pd-qty-label">{{ 'product.quantity' | translate }}</span>
+                 @if (product.stock > 0 && product.stock <= 5) {
+                   <span style="color: #dc2626; font-size: 11px; font-weight: 600; background: rgba(220, 38, 38, 0.1); padding: 2px 6px; border-radius: 4px;">
+                     {{ ts.currentLang() === 'ar' ? 'متبقي ' + product.stock + ' قطع فقط!' : 'Only ' + product.stock + ' pieces left!' }}
+                   </span>
+                 }
+              </div>
+              <div class="pd-qty">
+                <button class="pd-qty-btn" (click)="decreaseQty()" [disabled]="quantity <= 1 || product.stock === 0">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>
+                </button>
+                <span class="pd-qty-val">{{ quantity }}</span>
+                <button class="pd-qty-btn" (click)="increaseQty()" [disabled]="!product || quantity >= product.stock">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                </button>
+              </div>
+              @if (product.stock === 0) {
+                <div style="color: #dc2626; font-size: 13px; font-weight: 600; margin-top: 4px;">
+                  {{ ts.currentLang() === 'ar' ? 'عذراً، المنتج غير متوفر حالياً' : 'Sorry, product is currently out of stock' }}
+                </div>
+              }
+            </div>
+
+            <button class="pd-add-btn" (click)="addToCart()" [disabled]="product.stock === 0">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/>
+                <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+              </svg>
+              <span class="add-btn-text">{{ 'product.add_to_cart' | translate }}</span>
+              <span class="add-btn-divider">|</span>
+              <span class="add-btn-price">
+                @if (selectedSize) {
+                  {{ formatPrice(getDiscountedPrice(selectedSize.price * quantity, product.discountPercentage)) }}
+                } @else {
+                  {{ formatPrice(getDiscountedPrice(product.price * quantity, product.discountPercentage)) }}
+                }
+                <small style="font-size: 0.8em; opacity: 0.8;">{{ 'product.egp' | translate }}</small></span>
+            </button>
+          </div>
+        }
+
+        <!-- Availability Info -->
+        <div class="pd-availability">
+          @if (product.isDeleted) {
+            <div class="availability-status out-of-stock">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+              <span>{{ ts.currentLang() === 'ar' ? 'تم الإيقاف' : 'Discontinued' }}</span>
+            </div>
+          } @else {
+            <div class="availability-status" [class.in-stock]="product.stock > 0" [class.out-of-stock]="product.stock === 0">
+              @if (product.stock > 0) {
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <span>{{ ts.currentLang() === 'ar' ? 'متوفر' : 'Available' }}</span>
+              } @else {
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span>{{ 'product.out_of_stock' | translate }}</span>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Trust Badges -->
+        <div class="pd-trust">
+          <div class="trust-item">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+            <span>{{ ts.currentLang() === 'ar' ? 'الدفع عند الاستلام' : 'Cash on Delivery' }}</span>
+          </div>
+          <div class="trust-item">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+            <span>{{ ts.currentLang() === 'ar' ? 'منتج أصلي 100%' : '100% Authentic' }}</span>
+          </div>
+          <div class="trust-item">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            <span>{{ ts.currentLang() === 'ar' ? 'شحن سريع' : 'Fast Shipping' }}</span>
+          </div>
+        </div>
+
+
+      </div>
+    </div>
+
+    <!-- Related Products -->
+    @if (relatedProducts.length > 0) {
+      <section class="pd-related">
+        <div class="pd-related-header">
+          <h2>{{ 'product.related' | translate }}</h2>
+          <div class="pd-related-line"></div>
+        </div>
+        <div class="pd-related-grid">
+          @for (rp of relatedProducts; track rp._id) {
+            <div style="position: relative;">
+              <button class="wishlist-btn-card" (click)="$event.preventDefault(); toggleWishlist(rp)"
+                [class.active]="wishlistService.isInWishlist(rp._id)" [title]="ts.currentLang() === 'ar' ? 'أضف للمفضلة' : 'Add to Wishlist'">
+                <svg width="20" height="20" viewBox="0 0 24 24" [attr.fill]="wishlistService.isInWishlist(rp._id) ? 'currentColor' : 'none'"
+                  stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              </button>
+              <a [routerLink]="['/product', rp._id]" class="rp-card">
+              <div class="rp-img-wrap">
+                <img [src]="rp.images[0] | imgUrl" [alt]="ts.localize(rp.name)" class="rp-img">
+              </div>
+              <div class="rp-body">
+                <h3 class="rp-name">{{ ts.localize(rp.name) }}</h3>
+                <div class="rp-footer">
+                  <span class="rp-price price-display">
+                    @if (rp.discountPercentage && rp.discountPercentage > 0) {
+                      <span class="price-original">{{ formatPrice(getDisplayPrice(rp)) }}</span>
+                      <span class="price-final">{{ formatPrice(getDiscountedPrice(getDisplayPrice(rp), rp.discountPercentage)) }}</span>
+                    } @else {
+                      <span class="price-final">{{ formatPrice(getDisplayPrice(rp)) }}</span>
+                    }
+                    <small class="currency-tag">{{ 'product.egp' | translate }}</small>
+                  </span>
+                  <button class="rp-cart-btn" (click)="$event.preventDefault(); addRelatedToCart(rp)" [disabled]="rp.stock === 0">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+                  </button>
+                </div>
+              </div>
+            </a>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+  </div>
+</div>
+}

@@ -1,0 +1,186 @@
+/* ================================================
+   Toast — Midnight Gold Theme
+   ================================================ */
+
+.toast-container {
+    position: fixed;
+    top: 75px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+}
+[dir="rtl"] .toast-container { right: auto; left: 20px; }
+
+.toast-message {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--border);
+    color: var(--text);
+    min-width: 220px;
+    max-width: 350px;
+    animation: toastSlideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+
+@keyframes toastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(40px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+[dir="rtl"] .toast-message {
+    animation-name: toastSlideInRtl;
+}
+@keyframes toastSlideInRtl {
+    from {
+        opacity: 0;
+        transform: translateX(-40px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+/* Error */
+.toast-error {
+    border-left: 4px solid var(--danger);
+    background: linear-gradient(135deg, var(--bg-card) 0%, rgba(239, 68, 68, 0.08) 100%);
+}
+[dir="rtl"] .toast-error { border-left: none; border-right: 4px solid var(--danger); }
+
+.toast-error .toast-icon {
+    color: white;
+    background: var(--danger);
+}
+
+/* Success */
+.toast-success {
+    border-left: 4px solid var(--success);
+    background: linear-gradient(135deg, var(--bg-card) 0%, rgba(34, 197, 94, 0.08) 100%);
+}
+[dir="rtl"] .toast-success { border-left: none; border-right: 4px solid var(--success); }
+
+.toast-success .toast-icon {
+    color: white;
+    background: var(--success);
+}
+
+/* Info */
+.toast-info {
+    border-left: 4px solid #3b82f6;
+    background: linear-gradient(135deg, var(--bg-card) 0%, rgba(59, 130, 246, 0.08) 100%);
+}
+[dir="rtl"] .toast-info { border-left: none; border-right: 4px solid #3b82f6; }
+
+.toast-info .toast-icon {
+    color: white;
+    background: #3b82f6;
+}
+
+/* Icon */
+.toast-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+}
+
+.toast-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* Content */
+.toast-content {
+    flex-grow: 1;
+}
+
+.toast-content p {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--text);
+}
+
+/* Close */
+.toast-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.toast-close:hover {
+    color: var(--text);
+    background: var(--border);
+}
+
+/* Progress bar */
+.toast-message::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: 0 0 14px 14px;
+    animation: toastProgress 5s linear forwards;
+}
+
+.toast-error::after { background: var(--danger); }
+.toast-success::after { background: var(--success); }
+.toast-info::after { background: #3b82f6; }
+
+@keyframes toastProgress {
+    from { width: 100%; }
+    to { width: 0%; }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+    .toast-container {
+        top: 75px;
+        bottom: auto;
+        right: 12px;
+        left: auto;
+    }
+    [dir="rtl"] .toast-container { right: auto; left: 12px; }
+
+    .toast-message {
+        min-width: 200px;
+        max-width: 85vw;
+        width: auto;
+    }
+}

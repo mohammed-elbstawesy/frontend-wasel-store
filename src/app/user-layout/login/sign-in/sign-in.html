@@ -1,0 +1,54 @@
+<div class="auth-page">
+  <div class="auth-card animate-fadeIn">
+    <div class="auth-header">
+      <div class="auth-logo">🛒</div>
+      <h1>{{ 'auth.login_title' | translate }}</h1>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+      <div class="form-group">
+        <label class="form-label">{{ 'auth.email' | translate }}</label>
+        <input type="email" class="form-input" formControlName="email" dir="ltr"
+          autocomplete="email"
+          [placeholder]="ts.currentLang() === 'ar' ? 'example@email.com' : 'example@email.com'"
+          [class.error]="form.get('email')?.invalid && form.get('email')?.touched">
+        @if (form.get('email')?.touched && form.get('email')?.hasError('required')) {
+          <span class="form-error">{{ ts.currentLang() === 'ar' ? 'البريد الإلكتروني مطلوب' : 'Email is required' }}</span>
+        }
+        @if (form.get('email')?.touched && form.get('email')?.hasError('email') && !form.get('email')?.hasError('required')) {
+          <span class="form-error">{{ ts.currentLang() === 'ar' ? 'صيغة البريد غير صحيحة' : 'Invalid email format' }}</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">{{ 'auth.password' | translate }}</label>
+        <div class="password-wrapper">
+          <input [type]="showPassword ? 'text' : 'password'" class="form-input" formControlName="password"
+            autocomplete="current-password"
+            [class.error]="form.get('password')?.invalid && form.get('password')?.touched">
+          <button type="button" class="toggle-pass" (click)="showPassword = !showPassword">
+            {{ showPassword ? '🙈' : '👁️' }}
+          </button>
+        </div>
+        @if (form.get('password')?.touched && form.get('password')?.hasError('required')) {
+          <span class="form-error">{{ ts.currentLang() === 'ar' ? 'كلمة المرور مطلوبة' : 'Password is required' }}</span>
+        }
+        @if (form.get('password')?.touched && form.get('password')?.hasError('minlength') && !form.get('password')?.hasError('required')) {
+          <span class="form-error">{{ ts.currentLang() === 'ar' ? 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' : 'Password must be at least 6 characters' }}</span>
+        }
+      </div>
+
+      <a routerLink="/login/forgot-password" class="forgot-link">{{ 'auth.forgot_password' | translate }}</a>
+
+      <button type="submit" class="btn btn-primary btn-lg submit-btn" [disabled]="isLoading">
+        @if (isLoading) { <span class="spinner"></span> }
+        {{ 'auth.login_btn' | translate }}
+      </button>
+    </form>
+
+    <p class="auth-footer">
+      {{ 'auth.no_account' | translate }}
+      <a routerLink="/login/signup">{{ 'auth.signup_btn' | translate }}</a>
+    </p>
+  </div>
+</div>
