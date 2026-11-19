@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">WaselStore</string>
+    <string name="title_activity_main">WaselStore</string>
+    <string name="package_name">com.waselstore.app</string>
+    <string name="custom_url_scheme">com.waselstore.app</string>
+</resources>

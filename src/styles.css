@@ -107,6 +107,57 @@ body {
   transition: background 0.4s ease, color 0.4s ease;
 }
 
+/* ================================================
+   IONIC / CAPACITOR BULLET-PROOF LAYOUT
+   ================================================ */
+
+/* 1. Lock the outer containers to viewport size */
+html, body, ion-app, .ion-page, html.ion-ce {
+  height: 100% !important;
+  width: 100% !important;
+  min-height: 100% !important;
+  overflow: hidden !important;
+  position: relative !important;
+  margin: 0;
+  padding: 0;
+  /* Strip any Ionic properties that break fixed positioning */
+  contain: none !important;
+  transform: none !important;
+  will-change: auto !important;
+}
+
+/* 2. Safe area padding for notched phones */
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* 3. The actual scrollable container is our app layout */
+app-root {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.app-layout {
+  height: 100% !important;
+  width: 100%;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 4. Ensure mobile bottom nav stays fixed to viewport */
+.mobile-bottom-nav {
+  position: fixed !important;
+  bottom: 0 !important;
+  z-index: 9999 !important;
+  left: 0;
+  right: 0;
+}
+
 [dir="rtl"] body {
   font-family: 'Cairo', 'Outfit', sans-serif;
 }
