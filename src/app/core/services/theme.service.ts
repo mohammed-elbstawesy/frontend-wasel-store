@@ -13,6 +13,11 @@ export class ThemeService {
       if (isPlatformBrowser(this.platformId)) {
         const t = this.theme();
         document.documentElement.setAttribute('data-theme', t);
+        if (t === 'dark') {
+          document.documentElement.classList.add('ion-palette-dark');
+        } else {
+          document.documentElement.classList.remove('ion-palette-dark');
+        }
         localStorage.setItem('labstore-theme', t);
       }
     });

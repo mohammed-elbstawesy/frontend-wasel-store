@@ -14,6 +14,7 @@
 
 :host-context([data-theme="light"]) .hero {
   background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg) 100%);
+  color: var(--text);
 }
 
 .hero.hero-compact {

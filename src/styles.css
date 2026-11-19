@@ -5,6 +5,8 @@
    ================================================ */
 :root,
 [data-theme="dark"] {
+  --ion-background-color: #020617;
+  --ion-text-color: #f8fafc;
   --primary: #38bdf8;
   --primary-dark: #0ea5e9;
   --primary-light: rgba(56, 189, 248, 0.12);
@@ -44,6 +46,8 @@
    LIGHT THEME
    ================================================ */
 [data-theme="light"] {
+  --ion-background-color: #f9fafb;
+  --ion-text-color: #020617;
   --primary: #0077b6;
   --primary-dark: #005f92;
   --primary-light: #e0f2fe;
@@ -100,8 +104,8 @@ html {
 
 body {
   font-family: 'Outfit', 'Cairo', sans-serif;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--bg) !important;
+  color: var(--text) !important;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   transition: background 0.4s ease, color 0.4s ease;
@@ -183,6 +187,7 @@ input,
 select,
 textarea {
   font-family: inherit;
+  color: var(--text);
 }
 
 /* Container */
