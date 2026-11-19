@@ -7,14 +7,24 @@ import { Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class SocketService {
-  private socket: Socket;
+  private socket?: Socket;
 
   constructor() {
-    this.socket = io(environment.apiUrl.replace('/api/', ''));
+    try {
+      const url = (environment.apiUrl || '').replace(/\/api\/?$/, '');
+      this.socket = io(url, {
+        reconnectionAttempts: 2,
+        timeout: 4000,
+        autoConnect: true
+      });
+    } catch {
+      // Quietly ignore if connection setup fails
+    }
   }
 
   listen(eventName: string): Observable<any> {
     return new Observable((subscriber) => {
+      if (!this.socket) return;
       this.socket.on(eventName, (data: any) => {
         subscriber.next(data);
       });

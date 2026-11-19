@@ -122,7 +122,9 @@
 
 html {
   scroll-behavior: smooth;
-  height: 100%;
+  min-height: 100%;
+  height: auto;
+  overflow-x: hidden;
 }
 
 body {
@@ -132,8 +134,12 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   transition: background 0.4s ease, color 0.4s ease;
-  min-height: 100%;
+  min-height: 100vh;
+  position: static !important;
   overflow-x: hidden;
+  overflow-y: auto;
+  touch-action: auto !important;
+  -webkit-overflow-scrolling: touch;
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -142,10 +148,15 @@ body {
    IONIC / CAPACITOR BULLET-PROOF LAYOUT
    ================================================ */
 
-/* Lock container only when explicitly in capacitor/ionic native wrapper */
-html.plt-mobile ion-app,
-html.plt-capacitor ion-app,
-.ion-page {
+/* Ensure body & containers are never frozen or locked by Ionic/Capacitor */
+html,
+body,
+ion-app,
+.ion-page,
+html.plt-mobile,
+html.plt-capacitor,
+html.ion-ce {
+  position: static !important;
   contain: none !important;
   transform: none !important;
   will-change: auto !important;
