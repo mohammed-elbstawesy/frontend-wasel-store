@@ -64,8 +64,14 @@ export class ProductDetails implements OnInit {
           this.productService.getProductById(this.product._id).subscribe(p => {
              if (p) {
                this.product = p;
-               // Ensure quantity doesn't exceed new stock
-               if (this.quantity > p.stock) this.quantity = Math.max(1, p.stock);
+               // Re-select the same size from the updated product
+               if (this.selectedSize && p.sizes) {
+                 const updatedSize = p.sizes.find(s => s.label === this.selectedSize!.label);
+                 if (updatedSize) this.selectedSize = updatedSize;
+               }
+               // Ensure quantity doesn't exceed the effective stock
+               const max = this.effectiveStock;
+               if (this.quantity > max) this.quantity = Math.max(1, max);
              }
           });
         }
@@ -77,13 +83,36 @@ export class ProductDetails implements OnInit {
     this.subs.forEach(s => s.unsubscribe());
   }
 
+  /** Returns the effective stock for the currently selected variant */
+  get effectiveStock(): number {
+    if (!this.product) return 0;
+    if (this.selectedSize && this.selectedSize.stock !== undefined) {
+      return this.selectedSize.stock;
+    }
+    return this.product.stock;
+  }
+
   selectSize(size: ProductSize) {
     this.selectedSize = size;
+    // Reset quantity if it exceeds the new size's stock
+    if (this.quantity > this.effectiveStock) {
+      this.quantity = Math.max(1, this.effectiveStock);
+    }
   }
 
   increaseQty() { 
-    if (this.product && this.quantity < this.product.stock) {
+    if (!this.product) return;
+    const max = this.effectiveStock;
+    if (this.quantity < max) {
       this.quantity++; 
+    } else {
+      // User is trying to go beyond stock — show toast
+      this.toastService.show(
+        this.ts.currentLang() === 'ar'
+          ? `عذراً، الكمية المتاحة ${max} فقط`
+          : `Sorry, only ${max} available in stock`,
+        'error'
+      );
     }
   }
   decreaseQty() { if (this.quantity > 1) this.quantity--; }
@@ -91,11 +120,12 @@ export class ProductDetails implements OnInit {
   addToCart() {
     if (!this.product) return;
     if (this.product.sizes && this.product.sizes.length > 0 && !this.selectedSize) return;
-    if (this.quantity > this.product.stock) {
+    const max = this.effectiveStock;
+    if (this.quantity > max) {
       this.toastService.show(
         this.ts.currentLang() === 'ar'
-          ? `الكمية المطلوبة غير متاحة. المتاح: ${this.product.stock}`
-          : `Requested quantity not available. Available: ${this.product.stock}`,
+          ? `الكمية المطلوبة غير متاحة. المتاح: ${max}`
+          : `Requested quantity not available. Available: ${max}`,
         'error'
       );
       return;
@@ -104,8 +134,8 @@ export class ProductDetails implements OnInit {
     if (!added) {
       this.toastService.show(
         this.ts.currentLang() === 'ar'
-          ? `الكمية المطلوبة تتخطى المخزون المتاح (${this.product.stock})`
-          : `Quantity exceeds available stock (${this.product.stock})`,
+          ? `الكمية المطلوبة تتخطى المخزون المتاح (${max})`
+          : `Quantity exceeds available stock (${max})`,
         'error'
       );
       return;

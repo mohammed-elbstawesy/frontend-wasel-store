@@ -30,10 +30,10 @@
             </div>
           }
           <!-- Stock overlay badge: only show if Out of Stock or Low Stock (<= 5) -->
-          @if (product.stock <= 5) {
-            <div class="pd-stock-overlay" [ngClass]="product.stock === 0 ? 'out-of-stock' : 'low-stock'">
+          @if (effectiveStock <= 5) {
+            <div class="pd-stock-overlay" [ngClass]="effectiveStock === 0 ? 'out-of-stock' : 'low-stock'">
               <span class="stock-dot"></span>
-              {{ product.stock === 0 ? ('product.out_of_stock' | translate) : (ts.currentLang() === 'ar' ? 'كمية محدودة القابلة للبيع' : 'Low Stock') }}
+              {{ effectiveStock === 0 ? ('product.out_of_stock' | translate) : (ts.currentLang() === 'ar' ? 'كمية محدودة القابلة للبيع' : 'Low Stock') }}
             </div>
           }
         </div>
@@ -143,29 +143,29 @@
             <div class="pd-qty-wrap">
               <div style="display:flex; align-items:center; gap: 8px;">
                  <span class="pd-qty-label">{{ 'product.quantity' | translate }}</span>
-                 @if (product.stock > 0 && product.stock <= 5) {
+                 @if (effectiveStock > 0 && effectiveStock <= 5) {
                    <span style="color: #dc2626; font-size: 11px; font-weight: 600; background: rgba(220, 38, 38, 0.1); padding: 2px 6px; border-radius: 4px;">
-                     {{ ts.currentLang() === 'ar' ? 'متبقي ' + product.stock + ' قطع فقط!' : 'Only ' + product.stock + ' pieces left!' }}
+                     {{ ts.currentLang() === 'ar' ? 'متبقي ' + effectiveStock + ' قطع فقط!' : 'Only ' + effectiveStock + ' pieces left!' }}
                    </span>
                  }
               </div>
               <div class="pd-qty">
-                <button class="pd-qty-btn" (click)="decreaseQty()" [disabled]="quantity <= 1 || product.stock === 0">
+                <button class="pd-qty-btn" (click)="decreaseQty()" [disabled]="quantity <= 1 || effectiveStock === 0">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>
                 </button>
                 <span class="pd-qty-val">{{ quantity }}</span>
-                <button class="pd-qty-btn" (click)="increaseQty()" [disabled]="!product || quantity >= product.stock">
+                <button class="pd-qty-btn" (click)="increaseQty()" [disabled]="!product || effectiveStock === 0">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                 </button>
               </div>
-              @if (product.stock === 0) {
+              @if (effectiveStock === 0) {
                 <div style="color: #dc2626; font-size: 13px; font-weight: 600; margin-top: 4px;">
                   {{ ts.currentLang() === 'ar' ? 'عذراً، المنتج غير متوفر حالياً' : 'Sorry, product is currently out of stock' }}
                 </div>
               }
             </div>
 
-            <button class="pd-add-btn" (click)="addToCart()" [disabled]="product.stock === 0">
+            <button class="pd-add-btn" (click)="addToCart()" [disabled]="effectiveStock === 0">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/>
                 <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
