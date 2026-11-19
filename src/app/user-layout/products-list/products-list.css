@@ -168,11 +168,16 @@
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
+  box-shadow: var(--shadow-sm);
+}
+
+:host-context([data-theme="light"]) .product-card {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
 }
 
 .product-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 28px rgba(0,0,0,0.3);
+  box-shadow: var(--shadow-md), 0 0 20px var(--primary-glow);
   border-color: var(--border-hover);
 }
 

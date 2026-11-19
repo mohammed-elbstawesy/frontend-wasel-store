@@ -7,7 +7,7 @@
   position: fixed; top: 0; left: 0; bottom: 0; z-index: 200;
   border-right: 1px solid var(--border);
 }
-[dir="rtl"] .sidebar { left: auto; right: 0; border-right: none; border-left: 1px solid rgba(255,255,255,0.06); }
+[dir="rtl"] .sidebar { left: auto; right: 0; border-right: none; border-left: 1px solid var(--border); }
 
 .sidebar-header {
   display: flex; align-items: center; justify-content: space-between;
