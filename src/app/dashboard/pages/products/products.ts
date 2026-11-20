@@ -173,10 +173,37 @@ import { Subscription } from 'rxjs';
                </div>
             </div>
 
-            <!-- Image File -->
+            <!-- Product Image Selection (File or URL) -->
             <div class="form-group">
-              <label class="form-label">{{ ts.currentLang() === 'ar' ? 'صورة المنتج' : 'Product Image' }}</label>
-              <input type="file" class="form-input" (change)="onFileChange($event)" accept="image/*">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label class="form-label" style="margin-bottom: 0;">{{ ts.currentLang() === 'ar' ? 'صورة المنتج' : 'Product Image' }}</label>
+                <div class="img-mode-pills">
+                  <button type="button" class="img-pill" [class.active]="imageSourceType === 'file'" (click)="setImageSourceType('file')">
+                    📁 {{ ts.currentLang() === 'ar' ? 'من الجهاز' : 'Upload File' }}
+                  </button>
+                  <button type="button" class="img-pill" [class.active]="imageSourceType === 'url'" (click)="setImageSourceType('url')">
+                    🔗 {{ ts.currentLang() === 'ar' ? 'رابط مباشر (URL)' : 'Image URL' }}
+                  </button>
+                </div>
+              </div>
+
+              @if (imageSourceType === 'file') {
+                <input type="file" class="form-input" (change)="onFileChange($event)" accept="image/*">
+              } @else {
+                <input type="url" class="form-input" [(ngModel)]="imageUrl" (ngModelChange)="onUrlChange()" 
+                       [placeholder]="ts.currentLang() === 'ar' ? 'ضع رابط الصورة هنا (مثال: https://...)' : 'Paste image URL here (https://...)'">
+              }
+
+              <!-- Image Preview -->
+              @if (previewUrl) {
+                <div class="img-preview-box">
+                  <img [src]="previewUrl | imgUrl" class="img-preview-thumb" alt="Preview">
+                  <div class="img-preview-info">
+                    <span class="img-preview-name">{{ imageSourceType === 'file' ? (selectedFile?.name || (ts.currentLang() === 'ar' ? 'صورة محفوظة' : 'Saved Image')) : imageUrl }}</span>
+                    <button type="button" class="btn-clear-img" (click)="clearImage()">✕ {{ ts.currentLang() === 'ar' ? 'إزالة' : 'Remove' }}</button>
+                  </div>
+                </div>
+              }
             </div>
 
             <!-- Sizes (Required) -->
@@ -302,6 +329,9 @@ export class AdminProducts implements OnInit, OnDestroy {
   isLoading = false;
   currentProductId: string | null = null;
   selectedFile: File | null = null;
+  imageUrl = '';
+  previewUrl = '';
+  imageSourceType: 'file' | 'url' = 'file';
   private subs: Subscription[] = [];
 
   formData = {
@@ -422,6 +452,15 @@ export class AdminProducts implements OnInit, OnDestroy {
         isTopSelling: product.isTopSelling || false,
         sizes: product.sizes ? product.sizes.map(s => ({ label: s.label, price: s.price, stock: s.stock || 0 })) : []
       };
+      if (product.images && product.images.length > 0) {
+        this.previewUrl = product.images[0];
+        this.imageUrl = product.images[0];
+        this.imageSourceType = (product.images[0].startsWith('http://') || product.images[0].startsWith('https://')) ? 'url' : 'file';
+      } else {
+        this.previewUrl = '';
+        this.imageUrl = '';
+        this.imageSourceType = 'file';
+      }
       this.onCategoryChange(); // Load subcategories for selected category
     } else {
       this.isEditMode = false;
@@ -431,6 +470,9 @@ export class AdminProducts implements OnInit, OnDestroy {
         price: 0, category: '', subCategory: '', isTopSelling: false, sizes: []
       };
       this.availableSubCategories = [];
+      this.previewUrl = '';
+      this.imageUrl = '';
+      this.imageSourceType = 'file';
     }
   }
 
@@ -447,10 +489,32 @@ export class AdminProducts implements OnInit, OnDestroy {
     }
   }
 
-  onFileChange(event: any) {
-    if (event.target.files.length > 0) {
-      this.selectedFile = event.target.files[0];
+  setImageSourceType(type: 'file' | 'url') {
+    this.imageSourceType = type;
+    if (type === 'url' && this.imageUrl) {
+      this.previewUrl = this.imageUrl.trim();
+    } else if (type === 'file' && this.selectedFile) {
+      this.previewUrl = URL.createObjectURL(this.selectedFile);
     }
+  }
+
+  onFileChange(event: any) {
+    if (event.target.files && event.target.files.length > 0) {
+      this.selectedFile = event.target.files[0];
+      if (this.selectedFile) {
+        this.previewUrl = URL.createObjectURL(this.selectedFile);
+      }
+    }
+  }
+
+  onUrlChange() {
+    this.previewUrl = this.imageUrl ? this.imageUrl.trim() : '';
+  }
+
+  clearImage() {
+    this.selectedFile = null;
+    this.imageUrl = '';
+    this.previewUrl = '';
   }
 
   addSize() {
@@ -507,8 +571,14 @@ export class AdminProducts implements OnInit, OnDestroy {
 
 
 
-    if (this.selectedFile) {
+    if (this.imageSourceType === 'file' && this.selectedFile) {
       data.append('images', this.selectedFile); // Multer expects 'images' for products array 
+    } else if (this.imageSourceType === 'url' && this.imageUrl.trim()) {
+      data.append('images', JSON.stringify([this.imageUrl.trim()]));
+      data.append('imageUrl', this.imageUrl.trim());
+    } else if (this.isEditMode && this.previewUrl && !this.selectedFile) {
+      data.append('images', JSON.stringify([this.previewUrl]));
+      data.append('imageUrl', this.previewUrl);
     }
 
     if (this.isEditMode && this.currentProductId) {

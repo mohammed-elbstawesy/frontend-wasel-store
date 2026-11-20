@@ -86,8 +86,35 @@ import { ToastService } from '../../../core/services/toast.service';
             </div>
 
             <div class="form-group">
-              <label class="form-label">{{ ts.currentLang() === 'ar' ? 'الصورة (اختياري)' : 'Image (Optional)' }}</label>
-              <input type="file" class="form-input" (change)="onFileChange($event)" accept="image/*">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label class="form-label" style="margin-bottom: 0;">{{ ts.currentLang() === 'ar' ? 'صورة القسم (اختياري)' : 'Category Image (Optional)' }}</label>
+                <div class="img-mode-pills">
+                  <button type="button" class="img-pill" [class.active]="imageSourceType === 'file'" (click)="setImageSourceType('file')">
+                    📁 {{ ts.currentLang() === 'ar' ? 'من الجهاز' : 'Upload File' }}
+                  </button>
+                  <button type="button" class="img-pill" [class.active]="imageSourceType === 'url'" (click)="setImageSourceType('url')">
+                    🔗 {{ ts.currentLang() === 'ar' ? 'رابط مباشر (URL)' : 'Image URL' }}
+                  </button>
+                </div>
+              </div>
+
+              @if (imageSourceType === 'file') {
+                <input type="file" class="form-input" (change)="onFileChange($event)" accept="image/*">
+              } @else {
+                <input type="url" class="form-input" [(ngModel)]="imageUrl" (ngModelChange)="onUrlChange()" 
+                       [placeholder]="ts.currentLang() === 'ar' ? 'ضع رابط الصورة هنا (مثال: https://...)' : 'Paste image URL here (https://...)'">
+              }
+
+              <!-- Image Preview -->
+              @if (previewUrl) {
+                <div class="img-preview-box">
+                  <img [src]="previewUrl | imgUrl" class="img-preview-thumb" alt="Preview">
+                  <div class="img-preview-info">
+                    <span class="img-preview-name">{{ imageSourceType === 'file' ? (selectedFile?.name || (ts.currentLang() === 'ar' ? 'صورة محفوظة' : 'Saved Image')) : imageUrl }}</span>
+                    <button type="button" class="btn-clear-img" (click)="clearImage()">✕ {{ ts.currentLang() === 'ar' ? 'إزالة' : 'Remove' }}</button>
+                  </div>
+                </div>
+              }
             </div>
 
             <div class="form-group">
@@ -167,6 +194,9 @@ export class AdminCategories implements OnInit {
   isLoading = false;
   currentCatId: string | null = null;
   selectedFile: File | null = null;
+  imageUrl = '';
+  previewUrl = '';
+  imageSourceType: 'file' | 'url' = 'file';
   
   // Form state
   formData = {
@@ -227,10 +257,22 @@ export class AdminCategories implements OnInit {
         nameEn: cat.name.en,
         subCategories: cat.subCategories.map(sub => ({ name: { ar: sub.name.ar, en: sub.name.en } }))
       };
+      if (cat.image) {
+        this.previewUrl = cat.image;
+        this.imageUrl = cat.image;
+        this.imageSourceType = (cat.image.startsWith('http://') || cat.image.startsWith('https://')) ? 'url' : 'file';
+      } else {
+        this.previewUrl = '';
+        this.imageUrl = '';
+        this.imageSourceType = 'file';
+      }
     } else {
       this.isEditMode = false;
       this.currentCatId = null;
       this.formData = { nameAr: '', nameEn: '', subCategories: [] };
+      this.previewUrl = '';
+      this.imageUrl = '';
+      this.imageSourceType = 'file';
     }
   }
 
@@ -238,10 +280,32 @@ export class AdminCategories implements OnInit {
     this.isModalOpen = false;
   }
 
-  onFileChange(event: any) {
-    if (event.target.files.length > 0) {
-      this.selectedFile = event.target.files[0];
+  setImageSourceType(type: 'file' | 'url') {
+    this.imageSourceType = type;
+    if (type === 'url' && this.imageUrl) {
+      this.previewUrl = this.imageUrl.trim();
+    } else if (type === 'file' && this.selectedFile) {
+      this.previewUrl = URL.createObjectURL(this.selectedFile);
     }
+  }
+
+  onFileChange(event: any) {
+    if (event.target.files && event.target.files.length > 0) {
+      this.selectedFile = event.target.files[0];
+      if (this.selectedFile) {
+        this.previewUrl = URL.createObjectURL(this.selectedFile);
+      }
+    }
+  }
+
+  onUrlChange() {
+    this.previewUrl = this.imageUrl ? this.imageUrl.trim() : '';
+  }
+
+  clearImage() {
+    this.selectedFile = null;
+    this.imageUrl = '';
+    this.previewUrl = '';
   }
 
   addSubCategory() {
@@ -266,8 +330,6 @@ export class AdminCategories implements OnInit {
       return;
     }
 
-
-
     this.isLoading = true;
     
     // We send data as FormData because of the image
@@ -281,8 +343,14 @@ export class AdminCategories implements OnInit {
       data.append(`subCategories[${i}][name][en]`, sub.name.en);
     });
 
-    if (this.selectedFile) {
+    if (this.imageSourceType === 'file' && this.selectedFile) {
       data.append('image', this.selectedFile);
+    } else if (this.imageSourceType === 'url' && this.imageUrl.trim()) {
+      data.append('image', this.imageUrl.trim());
+      data.append('imageUrl', this.imageUrl.trim());
+    } else if (this.isEditMode && this.previewUrl && !this.selectedFile) {
+      data.append('image', this.previewUrl);
+      data.append('imageUrl', this.previewUrl);
     }
 
     if (this.isEditMode) {
