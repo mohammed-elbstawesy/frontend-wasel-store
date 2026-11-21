@@ -1,108 +1,129 @@
 <div class="container page">
-  <div class="cart-header">
-    <h1 class="page-title">{{ 'cart.title' | translate }}</h1>
-    @if (cartService.getItems().length > 0) {
-      <button class="btn btn-outline btn-sm text-danger" (click)="clearCart()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-        {{ 'cart.clear' | translate }}
-      </button>
-    }
-  </div>
-
-  @if (cartService.getItems().length > 0) {
-    <div class="cart-layout">
-      <!-- Items List -->
-      <div class="cart-items">
-        @for (item of cartService.getItems(); track item.product._id + (item.selectedSize?.label || '')) {
-          <div class="cart-item animate-fadeIn">
-            <a [routerLink]="['/product', item.product._id]" class="item-img-link">
-              <div class="img-wrap">
-                <img [src]="item.product.images[0] | imgUrl" [alt]="ts.localize(item.product.name)" class="item-img">
-              </div>
-            </a>
-            
-            <div class="item-details">
-              <a [routerLink]="['/product', item.product._id]" class="item-name">{{ ts.localize(item.product.name) }}</a>
-              @if (item.selectedSize) {
-                <span class="item-size-badge">{{ item.selectedSize.label }}</span>
-              }
-                <span class="item-unit-price price-display">
-                  @if (item.product.discountPercentage && item.product.discountPercentage > 0) {
-                    <span class="price-original">{{ formatPrice(item.selectedSize ? item.selectedSize.price : item.product.price) }}</span>
-                    <span class="price-final">{{ formatPrice((item.selectedSize ? item.selectedSize.price : item.product.price) * (1 - item.product.discountPercentage / 100)) }}</span>
-                  } @else {
-                    <span class="price-final">{{ formatPrice(item.selectedSize ? item.selectedSize.price : item.product.price) }}</span>
-                  }
-                  <small class="currency-tag">{{ 'product.egp' | translate }}</small>
-                </span>
-            </div>
-            
-            <div class="item-actions">
-              <div class="qty-control">
-                <button class="qty-btn" (click)="decreaseQty(item.product._id, item.selectedSize?.label, item.quantity)" [disabled]="item.quantity <= 1">−</button>
-                <span class="qty-value">{{ item.quantity }}</span>
-                <button class="qty-btn" (click)="increaseQty(item.product._id, item.selectedSize?.label, item.quantity)" [disabled]="item.quantity >= item.product.stock">+</button>
-              </div>
-              
-              <div class="item-total price-display">
-                @if (item.product.discountPercentage && item.product.discountPercentage > 0) {
-                  <span class="price-final">{{ formatPrice((item.selectedSize ? item.selectedSize.price : item.product.price) * (1 - item.product.discountPercentage / 100) * item.quantity) }}</span>
-                } @else {
-                  <span class="price-final">{{ formatPrice((item.selectedSize ? item.selectedSize.price : item.product.price) * item.quantity) }}</span>
-                }
-                <span class="currency-tag">{{ 'product.egp' | translate }}</span>
-              </div>
-              
-              <button class="remove-btn" (click)="removeItem(item.product._id, item.selectedSize?.label)" title="{{ 'cart.remove' | translate }}">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-              </button>
-            </div>
-          </div>
-        }
-      </div>
-
-      <!-- Order Summary Card -->
-      <div class="cart-summary card">
-        <h3 class="summary-title">{{ 'checkout.order_summary' | translate }}</h3>
-        
-        <div class="summary-line">
-          <span>{{ ts.currentLang() === 'ar' ? 'عدد المنتجات' : 'Items Count' }}</span>
-          <span class="font-bold">{{ cartService.cartCount }}</span>
-        </div>
-        
-        <div class="summary-total">
-          <span>{{ 'cart.total' | translate }}</span>
-          <div class="total-price">
-            {{ formatPrice(cartService.cartTotal) }} <small>{{ 'product.egp' | translate }}</small>
-          </div>
-        </div>
-        
-        <a routerLink="/checkout" class="btn btn-primary btn-lg checkout-btn">
-          {{ 'cart.checkout' | translate }}
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-        </a>
-        <a routerLink="/categories" class="btn btn-ghost continue-btn">{{ 'cart.continue_shopping' | translate }}</a>
-        
-        <div class="trust-indicators">
-          <div class="trust-item">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            <span>{{ ts.currentLang() === 'ar' ? 'تسوق آمن' : 'Secure Shopping' }}</span>
-          </div>
-          <div class="trust-item">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-            <span>{{ ts.currentLang() === 'ar' ? 'توصيل سريع' : 'Fast Delivery' }}</span>
-          </div>
-        </div>
-      </div>
+  @if (!authService.isLogin()) {
+    <div class="cart-header">
+      <h1 class="page-title">{{ 'cart.title' | translate }}</h1>
     </div>
-  } @else {
     <div class="empty-cart-state animate-fadeIn">
       <div class="empty-cart-icon">
-        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
       </div>
-      <h2>{{ 'cart.empty' | translate }}</h2>
-      <p class="empty-desc">{{ ts.currentLang() === 'ar' ? 'لم تضف أي منتجات إلى سلة التسوق الخاصة بك حتى الآن.' : 'You haven\'t added any items to your cart yet.' }}</p>
-      <a routerLink="/categories" class="btn btn-primary btn-lg mt-3">{{ 'cart.continue_shopping' | translate }}</a>
+      <h2>{{ ts.currentLang() === 'ar' ? 'يرجى تسجيل الدخول أولاً' : 'Please log in first' }}</h2>
+      <p class="empty-desc">
+        {{ ts.currentLang() === 'ar' ? 'قم بتسجيل الدخول للاطلاع على سلة التسوق الخاصة بك ومتابعة الشراء.' : 'Please log in to view your shopping cart and continue checkout.' }}
+      </p>
+      <a [routerLink]="['/login']" [queryParams]="{ returnUrl: '/cart' }" class="btn btn-primary btn-lg mt-3">
+        {{ ts.currentLang() === 'ar' ? 'تسجيل الدخول' : 'Log In' }}
+      </a>
     </div>
+  } @else {
+    <div class="cart-header">
+      <h1 class="page-title">{{ 'cart.title' | translate }}</h1>
+      @if (cartService.getItems().length > 0) {
+        <button class="btn btn-outline btn-sm text-danger" (click)="clearCart()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          {{ 'cart.clear' | translate }}
+        </button>
+      }
+    </div>
+
+    @if (cartService.getItems().length > 0) {
+      <div class="cart-layout">
+        <!-- Items List -->
+        <div class="cart-items">
+          @for (item of cartService.getItems(); track item.product._id + (item.selectedSize?.label || '')) {
+            <div class="cart-item animate-fadeIn">
+              <a [routerLink]="['/product', item.product._id]" class="item-img-link">
+                <div class="img-wrap">
+                  <img [src]="item.product.images[0] | imgUrl" [alt]="ts.localize(item.product.name)" class="item-img">
+                </div>
+              </a>
+              
+              <div class="item-details">
+                <a [routerLink]="['/product', item.product._id]" class="item-name">{{ ts.localize(item.product.name) }}</a>
+                @if (item.selectedSize) {
+                  <span class="item-size-badge">{{ item.selectedSize.label }}</span>
+                }
+                  <span class="item-unit-price price-display">
+                    @if (item.product.discountPercentage && item.product.discountPercentage > 0) {
+                      <span class="price-original">{{ formatPrice(item.selectedSize ? item.selectedSize.price : item.product.price) }}</span>
+                      <span class="price-final">{{ formatPrice((item.selectedSize ? item.selectedSize.price : item.product.price) * (1 - item.product.discountPercentage / 100)) }}</span>
+                    } @else {
+                      <span class="price-final">{{ formatPrice(item.selectedSize ? item.selectedSize.price : item.product.price) }}</span>
+                    }
+                    <small class="currency-tag">{{ 'product.egp' | translate }}</small>
+                  </span>
+              </div>
+              
+              <div class="item-actions">
+                <div class="qty-control">
+                  <button class="qty-btn" (click)="decreaseQty(item.product._id, item.selectedSize?.label, item.quantity)" [disabled]="item.quantity <= 1">−</button>
+                  <span class="qty-value">{{ item.quantity }}</span>
+                  <button class="qty-btn" (click)="increaseQty(item.product._id, item.selectedSize?.label, item.quantity)" [disabled]="item.quantity >= item.product.stock">+</button>
+                </div>
+                
+                <div class="item-total price-display">
+                  @if (item.product.discountPercentage && item.product.discountPercentage > 0) {
+                    <span class="price-final">{{ formatPrice((item.selectedSize ? item.selectedSize.price : item.product.price) * (1 - item.product.discountPercentage / 100) * item.quantity) }}</span>
+                  } @else {
+                    <span class="price-final">{{ formatPrice((item.selectedSize ? item.selectedSize.price : item.product.price) * item.quantity) }}</span>
+                  }
+                  <span class="currency-tag">{{ 'product.egp' | translate }}</span>
+                </div>
+                
+                <button class="remove-btn" (click)="removeItem(item.product._id, item.selectedSize?.label)" title="{{ 'cart.remove' | translate }}">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Order Summary Card -->
+        <div class="cart-summary card">
+          <h3 class="summary-title">{{ 'checkout.order_summary' | translate }}</h3>
+          
+          <div class="summary-line">
+            <span>{{ ts.currentLang() === 'ar' ? 'عدد المنتجات' : 'Items Count' }}</span>
+            <span class="font-bold">{{ cartService.cartCount }}</span>
+          </div>
+          
+          <div class="summary-total">
+            <span>{{ 'cart.total' | translate }}</span>
+            <div class="total-price">
+              {{ formatPrice(cartService.cartTotal) }} <small>{{ 'product.egp' | translate }}</small>
+            </div>
+          </div>
+          
+          <a routerLink="/checkout" class="btn btn-primary btn-lg checkout-btn">
+            {{ 'cart.checkout' | translate }}
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </a>
+          <a routerLink="/categories" class="btn btn-ghost continue-btn">{{ 'cart.continue_shopping' | translate }}</a>
+          
+          <div class="trust-indicators">
+            <div class="trust-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <span>{{ ts.currentLang() === 'ar' ? 'تسوق آمن' : 'Secure Shopping' }}</span>
+            </div>
+            <div class="trust-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+              <span>{{ ts.currentLang() === 'ar' ? 'توصيل سريع' : 'Fast Delivery' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="empty-cart-state animate-fadeIn">
+        <div class="empty-cart-icon">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        </div>
+        <h2>{{ 'cart.empty' | translate }}</h2>
+        <p class="empty-desc">{{ ts.currentLang() === 'ar' ? 'لم تضف أي منتجات إلى سلة التسوق الخاصة بك حتى الآن.' : 'You haven\'t added any items to your cart yet.' }}</p>
+        <a routerLink="/categories" class="btn btn-primary btn-lg mt-3">{{ 'cart.continue_shopping' | translate }}</a>
+      </div>
+    }
   }
 </div>

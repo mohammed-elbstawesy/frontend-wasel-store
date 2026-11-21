@@ -16,6 +16,8 @@ import { FormsModule } from '@angular/forms';
 import { SocketService } from '../../core/services/socket.service';
 import { Subscription } from 'rxjs';
 
+import { AuthService } from '../../core/services/auth.service';
+
 @Component({
   selector: 'app-home',
   standalone: true,
@@ -30,6 +32,7 @@ export class Home implements OnInit, OnDestroy {
   cartService = inject(CartService);
   wishlistService = inject(WishlistService);
   toastService = inject(ToastService);
+  authService = inject(AuthService);
   platformId = inject(PLATFORM_ID);
   router = inject(Router);
   socketService = inject(SocketService);
@@ -166,17 +169,35 @@ export class Home implements OnInit, OnDestroy {
   }
 
   addToCart(product: Product) {
+    if (!this.authService.isLogin()) {
+      this.toastService.show(
+        this.ts.currentLang() === 'ar' ? 'يرجى تسجيل الدخول أولاً' : 'Please log in first',
+        'info'
+      );
+      this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
+      return;
+    }
     const defaultSize = this.getAvailableSize(product) || undefined;
-    this.cartService.addToCart(product, defaultSize, 1);
-    this.toastService.show(
-      this.ts.currentLang() === 'ar'
-        ? `تمت إضافة "${this.ts.localize(product.name)}" للسلة`
-        : `"${this.ts.localize(product.name)}" added to cart`,
-      'success'
-    );
+    const added = this.cartService.addToCart(product, defaultSize, 1);
+    if (added) {
+      this.toastService.show(
+        this.ts.currentLang() === 'ar'
+          ? `تمت إضافة "${this.ts.localize(product.name)}" للسلة`
+          : `"${this.ts.localize(product.name)}" added to cart`,
+        'success'
+      );
+    }
   }
 
   toggleWishlist(product: Product) {
+    if (!this.authService.isLogin()) {
+      this.toastService.show(
+        this.ts.currentLang() === 'ar' ? 'يرجى تسجيل الدخول أولاً' : 'Please log in first',
+        'info'
+      );
+      this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
+      return;
+    }
     const added = this.wishlistService.toggle(product);
     if (added) {
       this.toastService.show(

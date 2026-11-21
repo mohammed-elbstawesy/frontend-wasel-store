@@ -8,6 +8,7 @@ import { ImgUrlPipe } from '../../shared/pipes/img-url.pipe';
 import { CartService } from '../../core/services/cart.service';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { ToastService } from '../../core/services/toast.service';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-cart',
@@ -21,6 +22,7 @@ export class Cart {
   cartService = inject(CartService);
   confirmService = inject(ConfirmService);
   toastService = inject(ToastService);
+  authService = inject(AuthService);
 
   increaseQty(productId: string, sizeLabel: string | undefined, currentQty: number) {
     const success = this.cartService.updateQuantity(productId, sizeLabel, currentQty + 1);

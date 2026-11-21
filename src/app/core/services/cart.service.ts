@@ -1,13 +1,19 @@
 import { Injectable, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { BehaviorSubject, firstValueFrom } from 'rxjs';
 import { CartItem } from '../models/cart.model';
 import { Product, ProductSize } from '../models/product.model';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { ToastService } from './toast.service';
+import { TranslationService } from './translation.service';
 
 @Injectable({ providedIn: 'root' })
 export class CartService {
   private _http = inject(HttpClient);
+  private _router = inject(Router);
+  private toastService = inject(ToastService);
+  private ts = inject(TranslationService);
 
   private cartKey = 'ecommerce_cart';
   private cartSubject = new BehaviorSubject<CartItem[]>([]);
@@ -73,6 +79,15 @@ export class CartService {
   }
 
   addToCart(product: Product, selectedSize?: ProductSize, quantity: number = 1): boolean {
+    if (!this.isLogin()) {
+      this.toastService.show(
+        this.ts.currentLang() === 'ar' ? 'يرجى تسجيل الدخول أولاً' : 'Please log in first',
+        'info'
+      );
+      this._router.navigate(['/login'], { queryParams: { returnUrl: this._router.url } });
+      return false;
+    }
+
     const items = [...this.cartSubject.value];
     const existingIndex = items.findIndex(
       i => i.product._id === product._id && i.selectedSize?.label === selectedSize?.label

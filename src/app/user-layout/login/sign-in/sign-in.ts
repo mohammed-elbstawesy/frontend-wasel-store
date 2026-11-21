@@ -49,7 +49,10 @@ export class SignIn {
         if (role === 'admin') {
           this.router.navigate(['/dashboard']);
         } else {
-          const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/';
+          const returnUrl =
+            this.route.snapshot.queryParams['returnUrl'] ||
+            this.route.parent?.snapshot.queryParams['returnUrl'] ||
+            '/';
           this.router.navigateByUrl(returnUrl);
         }
       },

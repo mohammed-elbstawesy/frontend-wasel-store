@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink, Router } from '@angular/router';
 import { TranslationService } from '../../core/services/translation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { ImgUrlPipe } from '../../shared/pipes/img-url.pipe';
@@ -8,6 +8,7 @@ import { ProductService } from '../../core/services/product.service';
 import { CartService } from '../../core/services/cart.service';
 import { WishlistService } from '../../core/services/wishlist.service';
 import { ToastService } from '../../core/services/toast.service';
+import { AuthService } from '../../core/services/auth.service';
 import { FallbackImageDirective } from '../../shared/directives/fallback-image.directive';
 import { Product, ProductSize } from '../../core/models/product.model';
 import { SocketService } from '../../core/services/socket.service';
@@ -26,6 +27,8 @@ export class ProductDetails implements OnInit {
   cartService = inject(CartService);
   wishlistService = inject(WishlistService);
   toastService = inject(ToastService);
+  authService = inject(AuthService);
+  router = inject(Router);
   route = inject(ActivatedRoute);
   socketService = inject(SocketService);
 
@@ -119,6 +122,14 @@ export class ProductDetails implements OnInit {
 
   addToCart() {
     if (!this.product) return;
+    if (!this.authService.isLogin()) {
+      this.toastService.show(
+        this.ts.currentLang() === 'ar' ? 'يرجى تسجيل الدخول أولاً' : 'Please log in first',
+        'info'
+      );
+      this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
+      return;
+    }
     if (this.product.sizes && this.product.sizes.length > 0 && !this.selectedSize) return;
     const max = this.effectiveStock;
     if (this.quantity > max) {
@@ -149,6 +160,14 @@ export class ProductDetails implements OnInit {
   }
 
   toggleWishlist(product: Product) {
+    if (!this.authService.isLogin()) {
+      this.toastService.show(
+        this.ts.currentLang() === 'ar' ? 'يرجى تسجيل الدخول أولاً' : 'Please log in first',
+        'info'
+      );
+      this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
+      return;
+    }
     const added = this.wishlistService.toggle(product);
     if (added) {
       this.toastService.show(
@@ -190,6 +209,14 @@ export class ProductDetails implements OnInit {
 
   addRelatedToCart(product: Product) {
     if (product.stock <= 0) return;
+    if (!this.authService.isLogin()) {
+      this.toastService.show(
+        this.ts.currentLang() === 'ar' ? 'يرجى تسجيل الدخول أولاً' : 'Please log in first',
+        'info'
+      );
+      this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
+      return;
+    }
     const added = this.cartService.addToCart(product, this.getAvailableSize(product) || undefined, 1);
     if (!added) {
       this.toastService.show(

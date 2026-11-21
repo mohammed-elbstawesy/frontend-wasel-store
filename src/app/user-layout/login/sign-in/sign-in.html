@@ -38,7 +38,7 @@
         }
       </div>
 
-      <a routerLink="/login/forgot-password" class="forgot-link">{{ 'auth.forgot_password' | translate }}</a>
+      <a routerLink="/login/forgot-password" queryParamsHandling="preserve" class="forgot-link">{{ 'auth.forgot_password' | translate }}</a>
 
       <button type="submit" class="btn btn-primary btn-lg submit-btn" [disabled]="isLoading">
         @if (isLoading) { <span class="spinner"></span> }
@@ -48,7 +48,7 @@
 
     <p class="auth-footer">
       {{ 'auth.no_account' | translate }}
-      <a routerLink="/login/signup">{{ 'auth.signup_btn' | translate }}</a>
+      <a routerLink="/login/signup" queryParamsHandling="preserve">{{ 'auth.signup_btn' | translate }}</a>
     </p>
   </div>
 </div>

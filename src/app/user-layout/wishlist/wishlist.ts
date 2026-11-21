@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router } from '@angular/router';
 import { TranslationService } from '../../core/services/translation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { ImgUrlPipe } from '../../shared/pipes/img-url.pipe';
@@ -8,6 +8,7 @@ import { FallbackImageDirective } from '../../shared/directives/fallback-image.d
 import { WishlistService } from '../../core/services/wishlist.service';
 import { CartService } from '../../core/services/cart.service';
 import { ToastService } from '../../core/services/toast.service';
+import { AuthService } from '../../core/services/auth.service';
 import { Product } from '../../core/models/product.model';
 
 @Component({
@@ -22,6 +23,8 @@ export class Wishlist {
   wishlistService = inject(WishlistService);
   cartService = inject(CartService);
   toastService = inject(ToastService);
+  authService = inject(AuthService);
+  router = inject(Router);
 
   removeFromWishlist(product: Product) {
     this.wishlistService.remove(product._id);
@@ -34,14 +37,24 @@ export class Wishlist {
   }
 
   addToCart(product: Product) {
+    if (!this.authService.isLogin()) {
+      this.toastService.show(
+        this.ts.currentLang() === 'ar' ? 'يرجى تسجيل الدخول أولاً' : 'Please log in first',
+        'info'
+      );
+      this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
+      return;
+    }
     const defaultSize = this.getAvailableSize(product) || undefined;
-    this.cartService.addToCart(product, defaultSize, 1);
-    this.toastService.show(
-      this.ts.currentLang() === 'ar'
-        ? `تمت إضافة "${this.ts.localize(product.name)}" للسلة`
-        : `"${this.ts.localize(product.name)}" added to cart`,
-      'success'
-    );
+    const added = this.cartService.addToCart(product, defaultSize, 1);
+    if (added) {
+      this.toastService.show(
+        this.ts.currentLang() === 'ar'
+          ? `تمت إضافة "${this.ts.localize(product.name)}" للسلة`
+          : `"${this.ts.localize(product.name)}" added to cart`,
+        'success'
+      );
+    }
   }
 
   getAvailableSize(product: Product) {

@@ -45,7 +45,7 @@ export class Profile implements OnInit {
     private _router:Router,
     private fb: FormBuilder,
     private userService: UserService,
-    private _authService:AuthService,
+    public _authService:AuthService,
     private toastService: ToastService
   ) {
 
@@ -69,12 +69,10 @@ export class Profile implements OnInit {
 
 
   ngOnInit(): void {
-
-    this.userIdByToken()
-
-
-
-
+    if (!this._authService.isLogin()) {
+      return;
+    }
+    this.userIdByToken();
     this.loadUserData();
   }
 

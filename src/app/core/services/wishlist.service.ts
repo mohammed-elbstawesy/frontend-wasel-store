@@ -1,15 +1,21 @@
 import { Injectable, inject, PLATFORM_ID } from '@angular/core';
+import { Router } from '@angular/router';
 import { isPlatformBrowser } from '@angular/common';
 import { BehaviorSubject, firstValueFrom } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { Product } from '../models/product.model';
 import { environment } from '../../../environments/environment';
+import { ToastService } from './toast.service';
+import { TranslationService } from './translation.service';
 
 @Injectable({ providedIn: 'root' })
 export class WishlistService {
   private readonly storageKey = 'wasel_wishlist';
   private platformId = inject(PLATFORM_ID);
   private _http = inject(HttpClient);
+  private _router = inject(Router);
+  private toastService = inject(ToastService);
+  private ts = inject(TranslationService);
   private wishlistSubject = new BehaviorSubject<Product[]>([]);
 
   wishlist$ = this.wishlistSubject.asObservable();
@@ -79,6 +85,15 @@ export class WishlistService {
   }
 
   toggle(product: Product): boolean {
+    if (!this.isLogin()) {
+      this.toastService.show(
+        this.ts.currentLang() === 'ar' ? 'يرجى تسجيل الدخول أولاً' : 'Please log in first',
+        'info'
+      );
+      this._router.navigate(['/login'], { queryParams: { returnUrl: this._router.url } });
+      return false;
+    }
+
     const items = [...this.wishlistSubject.value];
     const idx = items.findIndex(p => p._id === product._id);
     if (idx > -1) {

@@ -98,7 +98,10 @@ export class SignUp {
         );
         await this.cartService.mergeAndLoadCartOnLogin();
         await this.wishlistService.mergeAndLoadWishlistOnLogin();
-        const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/';
+        const returnUrl =
+          this.route.snapshot.queryParams['returnUrl'] ||
+          this.route.parent?.snapshot.queryParams['returnUrl'] ||
+          '/';
         this.router.navigateByUrl(returnUrl);
       },
       error: (err) => {

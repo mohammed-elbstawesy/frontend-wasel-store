@@ -8,6 +8,7 @@ import { FallbackImageDirective } from '../../shared/directives/fallback-image.d
 import { OrderService } from '../../core/services/order.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SocketService } from '../../core/services/socket.service';
+import { AuthService } from '../../core/services/auth.service';
 import { Order } from '../../core/models/order.model';
 import { Subscription } from 'rxjs';
 
@@ -21,7 +22,23 @@ import { Subscription } from 'rxjs';
         <h1 class="page-title">{{ ts.currentLang() === 'ar' ? 'طلباتي' : 'My Orders' }}</h1>
       </div>
 
-      @if (loading) {
+      @if (!authService.isLogin()) {
+        <div class="empty-state animate-fadeIn" style="text-align:center;padding:48px 24px;">
+          <div style="margin-bottom:16px;color:var(--primary);">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </div>
+          <h3>{{ ts.currentLang() === 'ar' ? 'يرجى تسجيل الدخول أولاً' : 'Please log in first' }}</h3>
+          <p style="color:var(--text-muted);margin:8px 0 24px;">
+            {{ ts.currentLang() === 'ar' ? 'قم بتسجيل الدخول للاطلاع على طلباتك السابقة.' : 'Log in to view your previous orders.' }}
+          </p>
+          <a [routerLink]="['/login']" [queryParams]="{ returnUrl: '/my-orders' }" class="btn btn-primary btn-lg">
+            {{ ts.currentLang() === 'ar' ? 'تسجيل الدخول' : 'Log In' }}
+          </a>
+        </div>
+      } @else if (loading) {
         <div class="empty-state">
           <div class="loading-spinner"></div>
           <p>{{ ts.currentLang() === 'ar' ? 'جاري التحميل...' : 'Loading...' }}</p>
@@ -189,6 +206,7 @@ export class MyOrders implements OnInit, OnDestroy {
   orderService = inject(OrderService);
   toastService = inject(ToastService);
   socketService = inject(SocketService);
+  authService = inject(AuthService);
 
   orders: Order[] = [];
   loading = true;
@@ -222,6 +240,10 @@ export class MyOrders implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    if (!this.authService.isLogin()) {
+      this.loading = false;
+      return;
+    }
     this.loadOrders();
     
     // Listen for real-time order updates via Socket.IO
