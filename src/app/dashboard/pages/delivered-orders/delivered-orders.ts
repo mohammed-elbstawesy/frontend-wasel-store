@@ -198,6 +198,13 @@ export class DeliveredOrders implements OnInit, OnDestroy {
         }
       })
     );
+
+    // Fallback polling when deployed on serverless (Vercel)
+    this.subs.push(
+      this.socketService.pollInServerless(30000).subscribe(() => {
+        this.orderService.getOrders().subscribe();
+      })
+    );
   }
 
   ngOnDestroy() {

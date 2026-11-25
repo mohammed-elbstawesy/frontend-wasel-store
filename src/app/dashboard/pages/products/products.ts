@@ -354,16 +354,23 @@ export class AdminProducts implements OnInit, OnDestroy {
 
     // Socket: real-time product updates
     this.subs.push(
-      this.socketService.listen('product_created').subscribe(() => this.loadProducts())
+      this.socketService.listen('product_created').subscribe(() => this.loadProducts(true))
     );
     this.subs.push(
-      this.socketService.listen('product_updated').subscribe(() => this.loadProducts())
+      this.socketService.listen('product_updated').subscribe(() => this.loadProducts(true))
     );
     this.subs.push(
-      this.socketService.listen('product_deleted').subscribe(() => this.loadProducts())
+      this.socketService.listen('product_deleted').subscribe(() => this.loadProducts(true))
     );
     this.subs.push(
-      this.socketService.listen('stock_updated').subscribe(() => this.loadProducts())
+      this.socketService.listen('stock_updated').subscribe(() => this.loadProducts(true))
+    );
+
+    // Fallback polling when deployed on serverless (Vercel)
+    this.subs.push(
+      this.socketService.pollInServerless(30000).subscribe(() => {
+        this.loadProducts(true);
+      })
     );
   }
 
@@ -376,15 +383,23 @@ export class AdminProducts implements OnInit, OnDestroy {
     this.filterProducts();
   }
 
-  loadProducts() {
-    this.isLoading = true;
+  loadProducts(silent = false) {
+    if (!silent) {
+      this.isLoading = true;
+    }
     this.productService.getAdminProducts('?includeDeleted=true').subscribe({
       next: (p) => {
         this.products = p;
         this.filterProducts();
-        this.isLoading = false;
+        if (!silent) {
+          this.isLoading = false;
+        }
       },
-      error: () => this.isLoading = false
+      error: () => {
+        if (!silent) {
+          this.isLoading = false;
+        }
+      }
     });
   }
 

@@ -164,6 +164,13 @@ export class StockManagement implements OnInit, OnDestroy {
         this.loadProducts();
       })
     );
+
+    // Fallback polling when deployed on serverless (Vercel)
+    this.subs.push(
+      this.socketService.pollInServerless(30000).subscribe(() => {
+        this.loadProducts();
+      })
+    );
   }
 
   ngOnDestroy() {

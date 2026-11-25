@@ -25,12 +25,16 @@ export class Cart {
   authService = inject(AuthService);
 
   increaseQty(productId: string, sizeLabel: string | undefined, currentQty: number) {
+    const item = this.cartService.getItems().find(
+      i => i.product._id === productId && i.selectedSize?.label === sizeLabel
+    );
+    const maxStock = item ? this.cartService.getItemMaxStock(item) : 0;
     const success = this.cartService.updateQuantity(productId, sizeLabel, currentQty + 1);
     if (!success) {
       this.toastService.show(
         this.ts.currentLang() === 'ar'
-          ? 'لا يمكن زيادة الكمية — المخزون غير كافي'
-          : 'Cannot increase quantity — insufficient stock',
+          ? `عذراً، الكمية المتاحة ${maxStock} فقط`
+          : `Sorry, only ${maxStock} available in stock`,
         'error'
       );
     }

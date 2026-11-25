@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
-import { catchError, map, Observable, throwError, shareReplay, tap, of } from 'rxjs';
+import { catchError, map, Observable, throwError, shareReplay, tap, Subject } from 'rxjs';
 import { User } from '../models/users.model';
 
 @Injectable({
@@ -12,6 +12,8 @@ export class UserService {
   // --- RxJS Caches ---
   private usersCache$: Observable<User[]> | null = null;
   private userCacheMap = new Map<string, Observable<any>>();
+  private userUpdatedSubject = new Subject<void>();
+  userUpdated$ = this.userUpdatedSubject.asObservable();
 
   constructor(private _http:HttpClient){}
 
@@ -66,7 +68,10 @@ export class UserService {
   // دالة التعديل (نفس الـ Backend اللي بعته) - وتفرغ الكاش عند نجاح التعديل
   updateUser(id: string, userData: any): Observable<any> {
     return this._http.put(`${this.url}/edit/${id}`, userData).pipe(
-      tap(() => this.clearCache())
+      tap(() => {
+        this.clearCache();
+        this.userUpdatedSubject.next();
+      })
     );
   }
 

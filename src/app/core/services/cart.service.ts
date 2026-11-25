@@ -29,7 +29,7 @@ export class CartService {
     if (this.isLogin()) {
       try {
         const res = await firstValueFrom(this._http.get<{ cart: any }>(`${environment.apiUrl}cart`));
-        let backendCart = res.cart?.items || [];
+        let backendCart: CartItem[] = (res.cart?.items || []).filter((i: any) => i && i.product);
 
         if (localCart.length > 0) {
           backendCart = this.mergeCarts(backendCart, localCart);
@@ -78,6 +78,28 @@ export class CartService {
     return this.cartSubject.value;
   }
 
+  /**
+   * Resolves effective stock for a product/size pair using live product.sizes stock
+   * first (since backend cart only persists label & price), falling back to selectedSize.stock or product.stock.
+   */
+  getEffectiveStock(product: Product, selectedSize?: ProductSize): number {
+    if (!product) return 0;
+    if (selectedSize?.label && product.sizes && product.sizes.length > 0) {
+      const liveSize = product.sizes.find(s => s.label === selectedSize.label);
+      if (liveSize && liveSize.stock !== undefined) {
+        return liveSize.stock;
+      }
+    }
+    if (selectedSize && selectedSize.stock !== undefined) {
+      return selectedSize.stock;
+    }
+    return product.stock ?? 0;
+  }
+
+  getItemMaxStock(item: CartItem): number {
+    return this.getEffectiveStock(item.product, item.selectedSize);
+  }
+
   addToCart(product: Product, selectedSize?: ProductSize, quantity: number = 1): boolean {
     if (!this.isLogin()) {
       this.toastService.show(
@@ -96,10 +118,7 @@ export class CartService {
     const currentQty = existingIndex > -1 ? items[existingIndex].quantity : 0;
     const newTotalQty = currentQty + quantity;
 
-    // Per-size stock check: use size stock if available, otherwise product stock
-    const maxStock = (selectedSize && selectedSize.stock !== undefined)
-      ? selectedSize.stock
-      : product.stock;
+    const maxStock = this.getEffectiveStock(product, selectedSize);
 
     if (newTotalQty > maxStock) {
       return false;
@@ -130,10 +149,7 @@ export class CartService {
     );
     if (!item) return false;
 
-    // Per-size stock check
-    const maxStock = (item.selectedSize && item.selectedSize.stock !== undefined)
-      ? item.selectedSize.stock
-      : item.product.stock;
+    const maxStock = this.getItemMaxStock(item);
 
     if (quantity > maxStock) {
       return false;
@@ -198,7 +214,8 @@ export class CartService {
         }
       );
       if (index > -1) {
-        merged[index].quantity += localItem.quantity;
+        const maxStock = this.getItemMaxStock(merged[index]);
+        merged[index].quantity = Math.min(maxStock || Infinity, merged[index].quantity + localItem.quantity);
       } else {
         merged.push(localItem);
       }

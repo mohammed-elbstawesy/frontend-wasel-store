@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, BehaviorSubject } from 'rxjs';
 import { Auth, User } from '../models/users.model';
 import { jwtDecode } from 'jwt-decode';
 import { Router } from '@angular/router';
@@ -16,6 +16,9 @@ export class AuthService {
   private _router = inject(Router);
   private _cartService = inject(CartService);
   private _wishlistService = inject(WishlistService);
+
+  private authStateSubject = new BehaviorSubject<boolean>(this.isLogin());
+  authState$ = this.authStateSubject.asObservable();
 
   constructor(private _http: HttpClient) {}
 
@@ -39,6 +42,7 @@ export class AuthService {
       tap((res) => {
         if (res?.token) {
           localStorage.setItem('token', res.token);
+          this.authStateSubject.next(true);
         }
       })
     );
@@ -69,11 +73,14 @@ export class AuthService {
     return !!this.getToken() && !this.isTokenExpired();
   }
 
-  logout(): void {
+  logout(redirectUrl: string | null = '/'): void {
     localStorage.removeItem('token');
+    this.authStateSubject.next(false);
     this._cartService.resetCart();
     this._wishlistService.resetWishlist();
-    this._router.navigate(['/']);
+    if (redirectUrl !== null) {
+      this._router.navigate([redirectUrl]);
+    }
   }
 
   signup(data: {
@@ -88,6 +95,7 @@ export class AuthService {
       tap((res: any) => {
         if (res?.token) {
           localStorage.setItem('token', res.token);
+          this.authStateSubject.next(true);
         }
       })
     );
@@ -110,6 +118,7 @@ export class AuthService {
       tap((res) => {
         if (res?.token) {
           localStorage.setItem('token', res.token);
+          this.authStateSubject.next(true);
         }
       })
     );

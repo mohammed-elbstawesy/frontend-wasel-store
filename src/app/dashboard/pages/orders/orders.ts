@@ -395,6 +395,18 @@ export class Orders implements OnInit, OnDestroy {
         }
       })
     );
+
+    // Fallback polling when deployed on serverless (Vercel) where WebSockets are inactive
+    this.subs.push(
+      this.socketService.pollInServerless(25000).subscribe(() => {
+        const previousIds = new Set(this.orders.map(o => o._id));
+        this.orderService.getOrders().subscribe(latestOrders => {
+          if (previousIds.size > 0 && latestOrders.some(o => !previousIds.has(o._id))) {
+            this.newOrderAlert = true;
+          }
+        });
+      })
+    );
   }
 
   ngOnDestroy() {

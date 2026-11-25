@@ -183,12 +183,13 @@
   transition: all 0.2s;
 }
 
-.qty-btn:hover:not(:disabled) {
+.qty-btn:hover:not(:disabled):not(.at-max) {
   background: var(--primary-light);
   color: var(--primary);
 }
 
-.qty-btn:disabled {
+.qty-btn:disabled,
+.qty-btn.at-max {
   opacity: 0.4;
   cursor: not-allowed;
 }

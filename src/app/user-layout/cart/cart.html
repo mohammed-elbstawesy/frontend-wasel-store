@@ -61,7 +61,9 @@
                 <div class="qty-control">
                   <button class="qty-btn" (click)="decreaseQty(item.product._id, item.selectedSize?.label, item.quantity)" [disabled]="item.quantity <= 1">−</button>
                   <span class="qty-value">{{ item.quantity }}</span>
-                  <button class="qty-btn" (click)="increaseQty(item.product._id, item.selectedSize?.label, item.quantity)" [disabled]="item.quantity >= item.product.stock">+</button>
+                  <button class="qty-btn"
+                    [class.at-max]="item.quantity >= cartService.getItemMaxStock(item)"
+                    (click)="increaseQty(item.product._id, item.selectedSize?.label, item.quantity)">+</button>
                 </div>
                 
                 <div class="item-total price-display">

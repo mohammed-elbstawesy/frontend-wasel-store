@@ -109,8 +109,8 @@
       <div class="user-menu-wrapper">
         <button class="user-avatar" (click)="toggleUserMenu()"
           style="overflow:hidden; padding:0; border:none; background:transparent;">
-          @if (userProfile) {
-          <img [src]="userProfile.image ? (userProfile.image | imgUrl) : ''" [alt]="userProfile.firstName || 'User'"
+          @if (userProfile?.image) {
+          <img [src]="userProfile.image | imgUrl" [alt]="userProfile.firstName || 'User'"
             style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
           } @else {
           <div
@@ -260,9 +260,9 @@
     </a>
     @if (auth.isLogin()) {
     <a routerLink="/profile" routerLinkActive="active" class="bottom-nav-item">
-      @if (userProfile) {
+      @if (userProfile?.image) {
       <div style="width: 24px; height: 24px; margin-bottom: 4px;">
-        <img [src]="userProfile.image ? (userProfile.image | imgUrl) : ''" [alt]="userProfile.firstName || 'User'"
+        <img [src]="userProfile.image | imgUrl" [alt]="userProfile.firstName || 'User'"
           style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
       </div>
       } @else {

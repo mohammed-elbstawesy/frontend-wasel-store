@@ -258,6 +258,16 @@ export class Overview implements OnInit, OnDestroy {
     this.subs.push(
       this.socketService.listen('settings_updated').subscribe(() => this.loadSettings())
     );
+
+    // Fallback polling when deployed on serverless (Vercel) where WebSockets are inactive
+    this.subs.push(
+      this.socketService.pollInServerless(30000).subscribe(() => {
+        this.loadStats();
+        this.loadProducts();
+        this.loadSettings();
+        this.orderService.getOrders().subscribe();
+      })
+    );
   }
 
   ngOnDestroy() {

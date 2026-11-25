@@ -261,6 +261,15 @@ export class MyOrders implements OnInit, OnDestroy {
         }
       })
     );
+
+    // Fallback polling when deployed on serverless (Vercel) where WebSockets are inactive
+    this.subs.push(
+      this.socketService.pollInServerless(25000).subscribe(() => {
+        if (this.authService.isLogin()) {
+          this.loadOrders();
+        }
+      })
+    );
   }
 
   ngOnDestroy() {

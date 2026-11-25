@@ -1,6 +1,7 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { TranslationService } from '../../../core/services/translation.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { AuthService } from '../../../core/services/auth.service';
@@ -18,7 +19,7 @@ import { FallbackImageDirective } from '../../../shared/directives/fallback-imag
   templateUrl: './navbar.html',
   styleUrl: './navbar.css',
 })
-export class Navbar implements OnInit {
+export class Navbar implements OnInit, OnDestroy {
   ts = inject(TranslationService);
   auth = inject(AuthService);
   cart = inject(CartService);
@@ -29,9 +30,30 @@ export class Navbar implements OnInit {
   mobileMenuOpen = false;
   userMenuOpen = false;
   userProfile: any = null;
+  private subs: Subscription[] = [];
 
   ngOnInit() {
-    this.loadUserProfile();
+    this.subs.push(
+      this.auth.authState$.subscribe((isLoggedIn) => {
+        if (isLoggedIn) {
+          this.loadUserProfile();
+        } else {
+          this.userProfile = null;
+        }
+      })
+    );
+
+    this.subs.push(
+      this.userService.userUpdated$.subscribe(() => {
+        if (this.auth.isLogin()) {
+          this.loadUserProfile();
+        }
+      })
+    );
+  }
+
+  ngOnDestroy() {
+    this.subs.forEach(s => s.unsubscribe());
   }
 
   loadUserProfile() {
@@ -45,6 +67,8 @@ export class Navbar implements OnInit {
           this.userProfile = null;
         }
       });
+    } else {
+      this.userProfile = null;
     }
   }
 
