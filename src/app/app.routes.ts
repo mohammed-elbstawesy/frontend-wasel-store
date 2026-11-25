@@ -44,6 +44,7 @@ export const routes: Routes = [
       { path: 'products', loadComponent: () => import('./dashboard/pages/products/products').then(m => m.AdminProducts) },
       { path: 'categories', loadComponent: () => import('./dashboard/pages/admin-categories/admin-categories').then(m => m.AdminCategories) },
       { path: 'discounts', loadComponent: () => import('./dashboard/pages/discounts/discounts').then(m => m.Discounts) },
+      { path: 'coupons', loadComponent: () => import('./dashboard/pages/coupons/coupons').then(m => m.AdminCoupons) },
       { path: 'stock', loadComponent: () => import('./dashboard/pages/stock/stock').then(m => m.StockManagement) },
       { path: 'users', loadComponent: () => import('./dashboard/pages/users/users').then(m => m.Users) },
       { path: 'logs', loadComponent: () => import('./dashboard/pages/logs/logs').then(m => m.Logs) },

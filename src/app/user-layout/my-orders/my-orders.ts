@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { TranslationService } from '../../core/services/translation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { ImgUrlPipe } from '../../shared/pipes/img-url.pipe';
@@ -9,6 +9,7 @@ import { OrderService } from '../../core/services/order.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SocketService } from '../../core/services/socket.service';
 import { AuthService } from '../../core/services/auth.service';
+import { CartService } from '../../core/services/cart.service';
 import { Order } from '../../core/models/order.model';
 import { Subscription } from 'rxjs';
 
@@ -108,6 +109,10 @@ import { Subscription } from 'rxjs';
                   }
                 </div>
                 <div class="footer-right">
+                  <button class="btn-reorder" (click)="reorder(order)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                    {{ ts.currentLang() === 'ar' ? 'إعادة الطلب' : 'Reorder' }}
+                  </button>
                   <button class="btn-view-details" (click)="openDetails(order)">
                     {{ ts.currentLang() === 'ar' ? 'تفاصيل الطلب' : 'View Details' }}
                   </button>
@@ -167,10 +172,32 @@ import { Subscription } from 'rxjs';
                   <span>{{ ts.currentLang() === 'ar' ? 'طريقة الدفع' : 'Payment Method' }}</span>
                   <span>{{ ts.currentLang() === 'ar' ? 'الدفع عند الاستلام' : 'Cash on Delivery' }}</span>
                 </div>
+                @if (selectedOrder.subtotal !== undefined) {
+                  <div class="modal-total-line mb-1">
+                    <span>{{ ts.currentLang() === 'ar' ? 'المجموع الفرعي' : 'Subtotal' }}</span>
+                    <span>{{ formatPrice(selectedOrder.subtotal) }} {{ 'product.egp' | translate }}</span>
+                  </div>
+                }
+                @if (selectedOrder.discountAmount && selectedOrder.discountAmount > 0) {
+                  <div class="modal-total-line mb-1" style="color: var(--success, #22c55e);">
+                    <span>{{ ts.currentLang() === 'ar' ? 'الخصم' : 'Discount' }} ({{ selectedOrder.couponCode }})</span>
+                    <span>-{{ formatPrice(selectedOrder.discountAmount) }} {{ 'product.egp' | translate }}</span>
+                  </div>
+                }
+                @if (selectedOrder.shippingFee !== undefined) {
+                  <div class="modal-total-line mb-1">
+                    <span>{{ ts.currentLang() === 'ar' ? 'الشحن' : 'Shipping' }}</span>
+                    <span>{{ selectedOrder.shippingFee === 0 ? (ts.currentLang() === 'ar' ? 'مجاني' : 'Free') : (formatPrice(selectedOrder.shippingFee) + ' ' + ('product.egp' | translate)) }}</span>
+                  </div>
+                }
                 <div class="modal-total-line final-total">
                   <span>{{ 'cart.total' | translate }}</span>
                   <strong>{{ formatPrice(selectedOrder.totalPrice) }} {{ 'product.egp' | translate }}</strong>
                 </div>
+                <button class="btn-reorder" style="width: 100%; justify-content: center; margin-top: 14px;" (click)="reorder(selectedOrder)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                  {{ ts.currentLang() === 'ar' ? 'إعادة طلب نفس المنتجات' : 'Reorder These Items' }}
+                </button>
               </div>
             </div>
           </div>
@@ -207,6 +234,8 @@ export class MyOrders implements OnInit, OnDestroy {
   toastService = inject(ToastService);
   socketService = inject(SocketService);
   authService = inject(AuthService);
+  cartService = inject(CartService);
+  router = inject(Router);
 
   orders: Order[] = [];
   loading = true;
@@ -367,6 +396,63 @@ export class MyOrders implements OnInit, OnDestroy {
         this.toastService.show(errorText, 'error');
       }
     });
+  }
+
+  reorder(order: Order) {
+    if (!order || !order.items || order.items.length === 0) return;
+    let addedCount = 0;
+    let skippedCount = 0;
+
+    for (const item of order.items) {
+      const product: any = item.product;
+      if (!product || typeof product === 'string' || product.isDeleted) {
+        skippedCount++;
+        continue;
+      }
+
+      const selectedSize = item.size && Array.isArray(product.sizes)
+        ? product.sizes.find((s: any) => s.label === item.size)
+        : (Array.isArray(product.sizes) && product.sizes.length > 0 ? product.sizes[0] : undefined);
+
+      const maxStock = this.cartService.getEffectiveStock(product, selectedSize);
+      if (maxStock <= 0) {
+        skippedCount++;
+        continue;
+      }
+
+      const existing = this.cartService.getItems().find(
+        i => i.product._id === product._id && i.selectedSize?.label === selectedSize?.label
+      );
+      const currentInCart = existing ? existing.quantity : 0;
+      const room = Math.max(0, maxStock - currentInCart);
+      const qtyToAdd = Math.min(item.quantity || 1, room);
+
+      if (qtyToAdd > 0 && this.cartService.addToCart(product, selectedSize, qtyToAdd)) {
+        addedCount++;
+      } else {
+        skippedCount++;
+      }
+    }
+
+    if (addedCount > 0) {
+      const msg = skippedCount > 0
+        ? (this.ts.currentLang() === 'ar'
+          ? `تمت إضافة ${addedCount} منتجات للسلة (تعذر إضافة ${skippedCount} لنفاد المخزون)`
+          : `Added ${addedCount} items to cart (${skippedCount} unavailable)`)
+        : (this.ts.currentLang() === 'ar'
+          ? `تمت إضافة جميع المنتجات (${addedCount}) للسلة`
+          : `Added all ${addedCount} items to cart`);
+      this.toastService.show(msg, 'success');
+      this.selectedOrder = null;
+      this.router.navigate(['/cart']);
+    } else {
+      this.toastService.show(
+        this.ts.currentLang() === 'ar'
+          ? 'عذراً، منتجات هذا الطلب غير متوفرة حالياً'
+          : 'Sorry, items from this order are currently unavailable',
+        'error'
+      );
+    }
   }
 
   formatPrice(price: number): string {

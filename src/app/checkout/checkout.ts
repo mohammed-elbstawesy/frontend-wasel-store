@@ -9,7 +9,8 @@ import { CartService } from '../core/services/cart.service';
 import { OrderService } from '../core/services/order.service';
 import { AuthService } from '../core/services/auth.service';
 import { ToastService } from '../core/services/toast.service';
-import { SettingsService } from '../core/services/settings.service';
+import { SettingsService, AppSettings } from '../core/services/settings.service';
+import { CouponService, ValidateCouponResponse } from '../core/services/coupon.service';
 import { FallbackImageDirective } from '../shared/directives/fallback-image.directive';
 import { EGYPTIAN_GOVERNORATES } from '../core/models/users.model';
 import { SocketService } from '../core/services/socket.service';
@@ -29,6 +30,7 @@ export class Checkout implements OnInit {
   authService = inject(AuthService);
   toastService = inject(ToastService);
   settingsService = inject(SettingsService);
+  couponService = inject(CouponService);
   router = inject(Router);
   socketService = inject(SocketService);
   private subs: Subscription[] = [];
@@ -42,9 +44,15 @@ export class Checkout implements OnInit {
   orderSuccess = false;
   ordersPaused = false;
 
+  appSettings: AppSettings = this.settingsService.currentSettings;
+  couponInput = '';
+  appliedCoupon: ValidateCouponResponse | null = null;
+  validatingCoupon = false;
+
   ngOnInit() {
-    // Check if orders are paused initially
+    // Check if orders are paused & load shipping rules
     this.settingsService.getSettings().subscribe(settings => {
+      this.appSettings = settings;
       this.ordersPaused = settings.ordersPaused;
     });
 
@@ -52,6 +60,7 @@ export class Checkout implements OnInit {
     this.subs.push(
       this.socketService.listen('settings_updated').subscribe((settings: any) => {
         if (settings) {
+          this.appSettings = settings;
           this.ordersPaused = settings.ordersPaused;
         }
       })
@@ -72,6 +81,69 @@ export class Checkout implements OnInit {
 
   ngOnDestroy() {
     this.subs.forEach(s => s.unsubscribe());
+  }
+
+  get freeShippingThreshold(): number {
+    return Number(this.appSettings?.freeShippingThreshold) || 0;
+  }
+
+  get remainingForFreeShipping(): number {
+    const threshold = this.freeShippingThreshold;
+    if (threshold <= 0) return 0;
+    return Math.max(0, Math.round((threshold - this.cartService.cartTotal) * 100) / 100);
+  }
+
+  get shippingFee(): number {
+    return this.settingsService.calculateShipping(this.governorate, this.cartService.cartTotal, this.appSettings);
+  }
+
+  get couponDiscount(): number {
+    if (!this.appliedCoupon) return 0;
+    return Math.min(this.cartService.cartTotal, this.appliedCoupon.discountAmount || 0);
+  }
+
+  get finalTotal(): number {
+    return Math.max(0, Math.round((this.cartService.cartTotal - this.couponDiscount + this.shippingFee) * 100) / 100);
+  }
+
+  getItemFinalPrice(item: any): number {
+    const base = item.selectedSize ? item.selectedSize.price : item.product.price;
+    const unit = item.product.discountPercentage
+      ? base * (1 - item.product.discountPercentage / 100)
+      : base;
+    return Math.round(unit * item.quantity * 100) / 100;
+  }
+
+  applyCoupon() {
+    const code = this.couponInput.trim();
+    if (!code || this.validatingCoupon) return;
+    this.validatingCoupon = true;
+    this.couponService.validateCoupon(code, this.cartService.cartTotal).subscribe({
+      next: (res) => {
+        this.validatingCoupon = false;
+        this.appliedCoupon = res;
+        this.toastService.show(
+          this.ts.currentLang() === 'ar'
+            ? `تم تطبيق الكوبون (${res.code}) بنجاح`
+            : `Promo code (${res.code}) applied`,
+          'success'
+        );
+      },
+      error: (err) => {
+        this.validatingCoupon = false;
+        this.appliedCoupon = null;
+        const msg = err.error?.message;
+        const text = typeof msg === 'object'
+          ? (this.ts.currentLang() === 'ar' ? (msg.ar || msg.en) : (msg.en || msg.ar))
+          : (msg || (this.ts.currentLang() === 'ar' ? 'كود الخصم غير صالح' : 'Invalid promo code'));
+        this.toastService.show(text, 'error');
+      }
+    });
+  }
+
+  removeCoupon() {
+    this.appliedCoupon = null;
+    this.couponInput = '';
   }
 
   formatPrice(price: number): string {
@@ -111,6 +183,7 @@ export class Checkout implements OnInit {
       address: this.address,
       phone: this.phone,
       notes: this.notes,
+      couponCode: this.appliedCoupon?.code || null,
     }).subscribe({
       next: () => {
         this.isProcessing = false;

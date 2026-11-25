@@ -168,6 +168,19 @@ export class Home implements OnInit, OnDestroy {
     return size ? size.price : product.price;
   }
 
+  getQuickMaxStock(product: Product): number {
+    const size = this.getAvailableSize(product) || undefined;
+    return this.cartService.getEffectiveStock(product, size);
+  }
+
+  getInCartQty(product: Product): number {
+    const size = this.getAvailableSize(product) || undefined;
+    const item = this.cartService.getItems().find(
+      i => i.product._id === product._id && i.selectedSize?.label === size?.label
+    );
+    return item ? item.quantity : 0;
+  }
+
   addToCart(product: Product) {
     if (!this.authService.isLogin()) {
       this.toastService.show(
@@ -178,6 +191,7 @@ export class Home implements OnInit, OnDestroy {
       return;
     }
     const defaultSize = this.getAvailableSize(product) || undefined;
+    const maxStock = this.cartService.getEffectiveStock(product, defaultSize);
     const added = this.cartService.addToCart(product, defaultSize, 1);
     if (added) {
       this.toastService.show(
@@ -186,6 +200,42 @@ export class Home implements OnInit, OnDestroy {
           : `"${this.ts.localize(product.name)}" added to cart`,
         'success'
       );
+    } else {
+      this.toastService.show(
+        this.ts.currentLang() === 'ar'
+          ? `عذراً، الكمية المتاحة ${maxStock} فقط`
+          : `Sorry, only ${maxStock} available in stock`,
+        'error'
+      );
+    }
+  }
+
+  increaseQuickQty(product: Product) {
+    if (!this.authService.isLogin()) {
+      this.addToCart(product);
+      return;
+    }
+    const defaultSize = this.getAvailableSize(product) || undefined;
+    const currentQty = this.getInCartQty(product);
+    const maxStock = this.cartService.getEffectiveStock(product, defaultSize);
+    const ok = this.cartService.updateQuantity(product._id, defaultSize?.label, currentQty + 1);
+    if (!ok) {
+      this.toastService.show(
+        this.ts.currentLang() === 'ar'
+          ? `عذراً، الحد الأقصى المتاح ${maxStock} فقط`
+          : `Sorry, max available stock is ${maxStock}`,
+        'error'
+      );
+    }
+  }
+
+  decreaseQuickQty(product: Product) {
+    const defaultSize = this.getAvailableSize(product) || undefined;
+    const currentQty = this.getInCartQty(product);
+    if (currentQty <= 1) {
+      this.cartService.removeFromCart(product._id, defaultSize?.label);
+    } else {
+      this.cartService.updateQuantity(product._id, defaultSize?.label, currentQty - 1);
     }
   }
 

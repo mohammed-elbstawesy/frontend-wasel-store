@@ -25,8 +25,9 @@ export class OrderService {
     address: string;
     phone: string;
     notes?: string;
+    couponCode?: string | null;
   }): Observable<any> {
-    const order = {
+    const order: any = {
       items: orderData.items.map(item => ({
         product: item.product._id,
         size: item.selectedSize?.label,
@@ -54,6 +55,9 @@ export class OrderService {
       notes: orderData.notes || '',
       paymentMethod: 'cash_on_delivery',
     };
+    if (orderData.couponCode) {
+      order.couponCode = orderData.couponCode;
+    }
     return this.http.post(this.apiUrl, order).pipe(
       tap((res: any) => {
         if (res?.data) {

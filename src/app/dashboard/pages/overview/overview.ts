@@ -1,22 +1,24 @@
 import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { TranslationService } from '../../../core/services/translation.service';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { OrderService } from '../../../core/services/order.service';
 import { ProductService } from '../../../core/services/product.service';
-import { SettingsService } from '../../../core/services/settings.service';
+import { SettingsService, ShippingRate } from '../../../core/services/settings.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { Order } from '../../../core/models/order.model';
 import { Product } from '../../../core/models/product.model';
+import { EGYPTIAN_GOVERNORATES } from '../../../core/models/users.model';
 import { SocketService } from '../../../core/services/socket.service';
 
 @Component({
   selector: 'app-overview',
   standalone: true,
-  imports: [CommonModule, RouterLink, TranslatePipe],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
   template: `
     <!-- Stats Header & Toggles -->
     <div class="overview-header">
@@ -78,6 +80,41 @@ import { SocketService } from '../../../core/services/socket.service';
           <span class="stat-label">{{ 'dash.low_stock' | translate }}</span>
         </div>
       </div>
+    </div>
+
+    <!-- Shipping & Delivery Rules -->
+    <div class="section-card" style="margin-bottom: 24px;">
+      <div class="section-header" style="margin-bottom: 12px;">
+        <h2>🚚 {{ ts.currentLang() === 'ar' ? 'إعدادات الشحن والتوصيل' : 'Shipping & Delivery Settings' }}</h2>
+        <button class="btn btn-ghost btn-sm" (click)="showShippingPanel = !showShippingPanel">
+          {{ showShippingPanel ? (ts.currentLang() === 'ar' ? 'إخفاء المحافظات' : 'Hide Governorates') : (ts.currentLang() === 'ar' ? 'تعديل أسعار المحافظات' : 'Edit Governorate Rates') }}
+        </button>
+      </div>
+
+      <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end;">
+        <div style="flex:1; min-width:180px;">
+          <label class="form-label">{{ ts.currentLang() === 'ar' ? 'حد الشحن المجاني (ج.م)' : 'Free Shipping Threshold (EGP)' }}</label>
+          <input type="number" min="0" class="form-input" [(ngModel)]="freeShippingThreshold">
+        </div>
+        <div style="flex:1; min-width:180px;">
+          <label class="form-label">{{ ts.currentLang() === 'ar' ? 'رسوم الشحن الافتراضية (ج.م)' : 'Default Shipping Fee (EGP)' }}</label>
+          <input type="number" min="0" class="form-input" [(ngModel)]="defaultShippingFee">
+        </div>
+        <button class="btn btn-primary" (click)="saveShippingSettings()" [disabled]="savingShipping">
+          {{ savingShipping ? '...' : ('dash.save' | translate) }}
+        </button>
+      </div>
+
+      @if (showShippingPanel) {
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:10px; margin-top:16px; padding-top:16px; border-top:1px dashed var(--border);">
+          @for (rate of shippingRates; track rate.governorate) {
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--bg-secondary); padding:8px 10px; border-radius:10px; border:1px solid var(--border);">
+              <span style="font-size:13px; font-weight:600;">{{ getGovLabel(rate.governorate) }}</span>
+              <input type="number" min="0" class="form-input" [(ngModel)]="rate.fee" style="width:74px; padding:4px 8px; text-align:center;">
+            </div>
+          }
+        </div>
+      }
     </div>
 
     <!-- Recent Orders -->
@@ -204,6 +241,11 @@ export class Overview implements OnInit, OnDestroy {
   lowStockProducts: Product[] = [];
   ordersPaused = false;
   isTogglingPause = false;
+  freeShippingThreshold = 500;
+  defaultShippingFee = 50;
+  shippingRates: ShippingRate[] = [];
+  showShippingPanel = false;
+  savingShipping = false;
   private subs: Subscription[] = [];
 
   ngOnInit() {
@@ -290,6 +332,43 @@ export class Overview implements OnInit, OnDestroy {
   loadSettings() {
     this.settingsService.getSettings().subscribe(settings => {
       this.ordersPaused = settings.ordersPaused;
+      this.freeShippingThreshold = settings.freeShippingThreshold ?? 500;
+      this.defaultShippingFee = settings.defaultShippingFee ?? 50;
+      if (settings.shippingRates && settings.shippingRates.length > 0) {
+        this.shippingRates = settings.shippingRates.map(r => ({ ...r }));
+      } else {
+        this.shippingRates = EGYPTIAN_GOVERNORATES.map(g => ({
+          governorate: g.en,
+          fee: this.defaultShippingFee
+        }));
+      }
+    });
+  }
+
+  getGovLabel(govEn: string): string {
+    const found = EGYPTIAN_GOVERNORATES.find(g => g.en.toLowerCase() === govEn.toLowerCase());
+    if (!found) return govEn;
+    return this.ts.currentLang() === 'ar' ? found.ar : found.en;
+  }
+
+  saveShippingSettings() {
+    this.savingShipping = true;
+    this.settingsService.updateSettings({
+      freeShippingThreshold: this.freeShippingThreshold,
+      defaultShippingFee: this.defaultShippingFee,
+      shippingRates: this.shippingRates
+    }).subscribe({
+      next: () => {
+        this.savingShipping = false;
+        this.toastService.show(
+          this.ts.currentLang() === 'ar' ? 'تم حفظ إعدادات الشحن بنجاح' : 'Shipping settings saved',
+          'success'
+        );
+      },
+      error: () => {
+        this.savingShipping = false;
+        this.toastService.show('Error saving shipping settings', 'error');
+      }
     });
   }
 

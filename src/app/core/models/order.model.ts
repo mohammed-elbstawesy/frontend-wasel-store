@@ -17,6 +17,10 @@ export interface Order {
   _id: string;
   user: any;
   items: OrderItem[];
+  subtotal?: number;
+  shippingFee?: number;
+  discountAmount?: number;
+  couponCode?: string | null;
   totalPrice: number;
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
   statusHistory?: StatusHistoryItem[];

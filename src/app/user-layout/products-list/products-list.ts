@@ -1,6 +1,7 @@
-import { Component, inject, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, ElementRef, inject, OnDestroy, OnInit, PLATFORM_ID, ViewChild } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, RouterLink, Router } from '@angular/router';
+import { Subject, Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
 import { TranslationService } from '../../core/services/translation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { ImgUrlPipe } from '../../shared/pipes/img-url.pipe';
@@ -12,7 +13,7 @@ import { WishlistService } from '../../core/services/wishlist.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Product } from '../../core/models/product.model';
-import { Category, SubCategory } from '../../core/models/category.model';
+import { Category } from '../../core/models/category.model';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -22,7 +23,7 @@ import { FormsModule } from '@angular/forms';
   templateUrl: './products-list.html',
   styleUrl: './products-list.css',
 })
-export class ProductsList implements OnInit {
+export class ProductsList implements OnInit, OnDestroy {
   ts = inject(TranslationService);
   productService = inject(ProductService);
   categoryService = inject(CategoryService);
@@ -30,89 +31,139 @@ export class ProductsList implements OnInit {
   wishlistService = inject(WishlistService);
   toastService = inject(ToastService);
   authService = inject(AuthService);
+  private platformId = inject(PLATFORM_ID);
   router = inject(Router);
   route = inject(ActivatedRoute);
 
   category: Category | undefined;
-  products: Product[] = [];
+  catId = '';
   filteredProducts: Product[] = [];
   activeSubCat: string = 'all';
   sortBy: string = 'newest';
   searchQuery: string = '';
 
+  // Lazy loading / Infinite scroll
+  page = 1;
+  readonly pageSize = 12;
+  hasMore = false;
+  isLoading = false;
+  isLoadingMore = false;
+
+  private searchSubject = new Subject<string>();
+  private subs: Subscription[] = [];
+  private activeLoadSub?: Subscription;
+  private observer?: IntersectionObserver;
+
+  @ViewChild('loadMoreSentinel')
+  set sentinelRef(el: ElementRef<HTMLElement> | undefined) {
+    this.setupObserver(el?.nativeElement);
+  }
+
   ngOnInit() {
-    this.route.params.subscribe(params => {
-      const catId = params['catId'];
-      const subCatId = params['subCatId'];
+    this.subs.push(
+      this.searchSubject.pipe(debounceTime(350), distinctUntilChanged()).subscribe(() => {
+        this.resetAndLoad();
+      })
+    );
 
-      this.categoryService.getCategoryById(catId).subscribe(cat => {
-        this.category = cat;
-      });
+    this.subs.push(
+      this.route.params.subscribe(params => {
+        this.catId = params['catId'];
+        const subCatId = params['subCatId'];
+        this.activeSubCat = subCatId || 'all';
 
-      this.productService.getProductsByCategory(catId).subscribe(products => {
-        this.products = products;
-        if (subCatId) {
-          this.activeSubCat = subCatId;
-          this.filteredProducts = products.filter(p => p.subCategory === subCatId);
-        } else {
-          this.filteredProducts = products;
+        this.categoryService.getCategoryById(this.catId).subscribe(cat => {
+          this.category = cat;
+        });
+
+        this.resetAndLoad();
+      })
+    );
+  }
+
+  ngOnDestroy() {
+    this.subs.forEach(s => s.unsubscribe());
+    this.activeLoadSub?.unsubscribe();
+    this.observer?.disconnect();
+  }
+
+  private setupObserver(el?: HTMLElement) {
+    this.observer?.disconnect();
+    if (!el || !isPlatformBrowser(this.platformId) || typeof IntersectionObserver === 'undefined') {
+      return;
+    }
+    this.observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && this.hasMore && !this.isLoading && !this.isLoadingMore) {
+          this.loadNextPage();
         }
-        this.applySorting();
-      });
-    });
+      },
+      { rootMargin: '250px' }
+    );
+    this.observer.observe(el);
   }
 
   filterBySubCategory(subCatId: string) {
     this.activeSubCat = subCatId;
-    this.applyAllFilters();
+    this.resetAndLoad();
   }
 
   onSortChange(event: any) {
     this.sortBy = event.target.value;
-    this.applySorting();
-  }
-
-  applySorting() {
-    switch (this.sortBy) {
-      case 'price_low':
-        this.filteredProducts.sort((a, b) => a.price - b.price);
-        break;
-      case 'price_high':
-        this.filteredProducts.sort((a, b) => b.price - a.price);
-        break;
-      case 'newest':
-      default:
-        this.filteredProducts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }
+    this.resetAndLoad();
   }
 
   onSearchChange() {
-    this.applyAllFilters();
+    this.searchSubject.next(this.searchQuery);
   }
 
-  applyAllFilters() {
-    let result = [...this.products];
+  resetAndLoad() {
+    if (!this.catId) return;
+    this.page = 1;
+    this.filteredProducts = [];
+    this.hasMore = false;
+    this.fetchPage(true);
+  }
 
-    // Hide fully out-of-stock products unless searching
-    const isSearching = this.searchQuery.trim().length > 0;
-    if (!isSearching) {
-      result = result.filter(p => p.stock > 0);
+  loadNextPage() {
+    if (!this.hasMore || this.isLoading || this.isLoadingMore) return;
+    this.page += 1;
+    this.fetchPage(false);
+  }
+
+  private fetchPage(reset: boolean) {
+    this.activeLoadSub?.unsubscribe();
+    if (reset) {
+      this.isLoading = true;
+    } else {
+      this.isLoadingMore = true;
     }
 
-    // Filter by subcategory
-    if (this.activeSubCat !== 'all') {
-      result = result.filter(p => p.subCategory === this.activeSubCat);
-    }
-    // Filter by search
-    if (isSearching) {
-      const query = this.searchQuery.trim().toLowerCase();
-      result = result.filter(p =>
-        p.name.en.toLowerCase().includes(query) ||
-        p.name.ar.includes(this.searchQuery.trim())
-      );
-    }
-    this.filteredProducts = result;
-    this.applySorting();
+    this.activeLoadSub = this.productService.getProductsByCategoryPaginated(this.catId, {
+      page: this.page,
+      limit: this.pageSize,
+      subCategory: this.activeSubCat,
+      search: this.searchQuery,
+      sort: this.sortBy,
+      hideOutOfStock: true
+    }).subscribe({
+      next: (res) => {
+        if (reset) {
+          this.filteredProducts = res.products || [];
+        } else {
+          const existingIds = new Set(this.filteredProducts.map(p => p._id));
+          const fresh = (res.products || []).filter(p => !existingIds.has(p._id));
+          this.filteredProducts = [...this.filteredProducts, ...fresh];
+        }
+        this.hasMore = !!res.hasMore;
+        this.isLoading = false;
+        this.isLoadingMore = false;
+      },
+      error: () => {
+        this.isLoading = false;
+        this.isLoadingMore = false;
+      }
+    });
   }
 
   /** Returns first in-stock size, or first size if all are out */
@@ -126,6 +177,19 @@ export class ProductsList implements OnInit {
     return size ? size.price : product.price;
   }
 
+  getQuickMaxStock(product: Product): number {
+    const size = this.getAvailableSize(product) || undefined;
+    return this.cartService.getEffectiveStock(product, size);
+  }
+
+  getInCartQty(product: Product): number {
+    const size = this.getAvailableSize(product) || undefined;
+    const item = this.cartService.getItems().find(
+      i => i.product._id === product._id && i.selectedSize?.label === size?.label
+    );
+    return item ? item.quantity : 0;
+  }
+
   addToCart(product: Product) {
     if (!this.authService.isLogin()) {
       this.toastService.show(
@@ -136,6 +200,7 @@ export class ProductsList implements OnInit {
       return;
     }
     const defaultSize = this.getAvailableSize(product) || undefined;
+    const maxStock = this.cartService.getEffectiveStock(product, defaultSize);
     const added = this.cartService.addToCart(product, defaultSize, 1);
     if (added) {
       this.toastService.show(
@@ -144,6 +209,42 @@ export class ProductsList implements OnInit {
           : `"${this.ts.localize(product.name)}" added to cart`,
         'success'
       );
+    } else {
+      this.toastService.show(
+        this.ts.currentLang() === 'ar'
+          ? `عذراً، الكمية المتاحة ${maxStock} فقط`
+          : `Sorry, only ${maxStock} available in stock`,
+        'error'
+      );
+    }
+  }
+
+  increaseQuickQty(product: Product) {
+    if (!this.authService.isLogin()) {
+      this.addToCart(product);
+      return;
+    }
+    const defaultSize = this.getAvailableSize(product) || undefined;
+    const currentQty = this.getInCartQty(product);
+    const maxStock = this.cartService.getEffectiveStock(product, defaultSize);
+    const ok = this.cartService.updateQuantity(product._id, defaultSize?.label, currentQty + 1);
+    if (!ok) {
+      this.toastService.show(
+        this.ts.currentLang() === 'ar'
+          ? `عذراً، الحد الأقصى المتاح ${maxStock} فقط`
+          : `Sorry, max available stock is ${maxStock}`,
+        'error'
+      );
+    }
+  }
+
+  decreaseQuickQty(product: Product) {
+    const defaultSize = this.getAvailableSize(product) || undefined;
+    const currentQty = this.getInCartQty(product);
+    if (currentQty <= 1) {
+      this.cartService.removeFromCart(product._id, defaultSize?.label);
+    } else {
+      this.cartService.updateQuantity(product._id, defaultSize?.label, currentQty - 1);
     }
   }
 

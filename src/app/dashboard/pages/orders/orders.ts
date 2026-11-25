@@ -228,6 +228,27 @@ import { SocketService } from '../../../core/services/socket.service';
               </div>
             }
 
+            @if (!isEditing && selectedOrder) {
+              @if (selectedOrder.subtotal !== undefined) {
+                <div style="display:flex; justify-content:space-between; font-size:13px; color:var(--text-muted); margin-top:10px;">
+                  <span>{{ ts.currentLang() === 'ar' ? 'المجموع الفرعي' : 'Subtotal' }}</span>
+                  <span>{{ selectedOrder.subtotal.toLocaleString() }} {{ 'product.egp' | translate }}</span>
+                </div>
+              }
+              @if (selectedOrder.discountAmount && selectedOrder.discountAmount > 0) {
+                <div style="display:flex; justify-content:space-between; font-size:13px; color:var(--success); margin-top:4px;">
+                  <span>{{ ts.currentLang() === 'ar' ? 'خصم الكوبون' : 'Discount' }} ({{ selectedOrder.couponCode }})</span>
+                  <span>-{{ selectedOrder.discountAmount.toLocaleString() }} {{ 'product.egp' | translate }}</span>
+                </div>
+              }
+              @if (selectedOrder.shippingFee !== undefined) {
+                <div style="display:flex; justify-content:space-between; font-size:13px; color:var(--text-muted); margin-top:4px;">
+                  <span>{{ ts.currentLang() === 'ar' ? 'مصاريف الشحن' : 'Shipping' }}</span>
+                  <span>{{ selectedOrder.shippingFee === 0 ? (ts.currentLang() === 'ar' ? 'مجاني' : 'Free') : (selectedOrder.shippingFee.toLocaleString() + ' ' + ('product.egp' | translate)) }}</span>
+                </div>
+              }
+            }
+
             <div class="modal-total">
               <strong>{{ 'cart.total' | translate }}:</strong>
               <strong class="text-primary">{{ getEditTotal().toLocaleString() }} {{ 'product.egp' | translate }}</strong>
@@ -398,7 +419,7 @@ export class Orders implements OnInit, OnDestroy {
 
     // Fallback polling when deployed on serverless (Vercel) where WebSockets are inactive
     this.subs.push(
-      this.socketService.pollInServerless(25000).subscribe(() => {
+      this.socketService.pollInServerless(20000).subscribe(() => {
         const previousIds = new Set(this.orders.map(o => o._id));
         this.orderService.getOrders().subscribe(latestOrders => {
           if (previousIds.size > 0 && latestOrders.some(o => !previousIds.has(o._id))) {

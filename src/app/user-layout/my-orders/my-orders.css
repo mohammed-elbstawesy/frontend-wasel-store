@@ -284,6 +284,26 @@
   animation: spin 0.6s linear infinite;
 }
 
+.btn-reorder {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: var(--primary-light);
+  border: 1px solid rgba(245, 166, 35, 0.35);
+  border-radius: 8px;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-reorder:hover {
+  background: var(--primary);
+  color: var(--primary-text, #111);
+}
+
 .order-total {
   display: flex;
   align-items: center;
@@ -532,6 +552,8 @@
   .step-icon svg { width: 12px; height: 12px; }
 
   .item-image { width: 40px; height: 40px; border-radius: 8px; }
+
+  .btn-reorder { width: 100%; justify-content: center; }
 
   .order-total { align-self: flex-start; margin-top: 10px; width: 100%; justify-content: space-between; border-top: 1px dashed var(--border); padding-top: 12px; }
   

@@ -1047,3 +1047,72 @@ tr:hover td {
 .btn-clear-img:hover {
   background: rgba(239, 68, 68, 0.1);
 }
+
+/* ================================================
+   QUICK QUANTITY STEPPER & LAZY LOADING SENTINEL
+   ================================================ */
+.quick-qty-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  background: var(--primary-light);
+  overflow: hidden;
+  height: 34px;
+  flex-shrink: 0;
+}
+
+.quick-qty-btn {
+  width: 28px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--primary);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, opacity 0.2s;
+}
+
+.quick-qty-btn:hover:not(.at-max) {
+  background: var(--primary);
+  color: var(--primary-text);
+}
+
+.quick-qty-btn.at-max {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.quick-qty-val {
+  min-width: 24px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.scroll-sentinel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 16px 48px;
+  gap: 12px;
+}
+
+.lazy-spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

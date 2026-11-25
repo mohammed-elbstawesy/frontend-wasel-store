@@ -1,7 +1,8 @@
-import { Component, inject, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, ElementRef, inject, OnDestroy, OnInit, PLATFORM_ID, ViewChild } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { Subject, Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
 import { TranslationService } from '../../core/services/translation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { ImgUrlPipe } from '../../shared/pipes/img-url.pipe';
@@ -22,7 +23,7 @@ import { FallbackImageDirective } from '../../shared/directives/fallback-image.d
   templateUrl: './our-products.html',
   styleUrl: './our-products.css',
 })
-export class OurProducts implements OnInit {
+export class OurProducts implements OnInit, OnDestroy {
   ts = inject(TranslationService);
   productService = inject(ProductService);
   categoryService = inject(CategoryService);
@@ -30,37 +31,153 @@ export class OurProducts implements OnInit {
   wishlistService = inject(WishlistService);
   toastService = inject(ToastService);
   authService = inject(AuthService);
+  private platformId = inject(PLATFORM_ID);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
-  allProducts: Product[] = [];
+  products: Product[] = [];
   categories: Category[] = [];
-  
+
   searchQuery = '';
   selectedCategory = '';
   selectedSubCategory = '';
   sortBy = 'name';
   priceMin = 0;
-  priceMax = 100000;
-  maxPrice = 100000;
+  priceMax = 5000;
+  maxPrice = 5000;
   viewMode: 'grid' | 'list' = 'grid';
   discountOnly = false;
 
+  // Lazy loading / Infinite Scroll state
+  page = 1;
+  readonly pageSize = 12;
+  totalProducts = 0;
+  hasMore = false;
+  isLoading = false;
+  isLoadingMore = false;
+
+  private searchSubject = new Subject<string>();
+  private priceSubject = new Subject<number>();
+  private subs: Subscription[] = [];
+  private activeLoadSub?: Subscription;
+  private observer?: IntersectionObserver;
+
+  @ViewChild('loadMoreSentinel')
+  set sentinelRef(el: ElementRef<HTMLElement> | undefined) {
+    this.setupObserver(el?.nativeElement);
+  }
+
   ngOnInit() {
-    this.productService.getProducts().subscribe(prods => {
-      this.allProducts = prods;
-      if (prods.length > 0) {
-        const prices = prods.flatMap(p => p.sizes?.length ? p.sizes.map(s => s.price) : [p.price]);
-        this.maxPrice = Math.ceil(Math.max(...prices) / 100) * 100;
-        this.priceMax = this.maxPrice;
-      }
-    });
     this.categoryService.getCategories().subscribe(cats => this.categories = cats);
 
-    // Check for discount filter from query params
+    this.subs.push(
+      this.searchSubject.pipe(debounceTime(350), distinctUntilChanged()).subscribe(() => {
+        this.resetAndLoad();
+      })
+    );
+
+    this.subs.push(
+      this.priceSubject.pipe(debounceTime(350), distinctUntilChanged()).subscribe(() => {
+        this.resetAndLoad();
+      })
+    );
+
     this.route.queryParams.subscribe(params => {
       if (params['filter'] === 'discounts') {
         this.discountOnly = true;
+      }
+      this.resetAndLoad();
+    });
+  }
+
+  ngOnDestroy() {
+    this.subs.forEach(s => s.unsubscribe());
+    this.activeLoadSub?.unsubscribe();
+    this.observer?.disconnect();
+  }
+
+  private setupObserver(el?: HTMLElement) {
+    this.observer?.disconnect();
+    if (!el || !isPlatformBrowser(this.platformId) || typeof IntersectionObserver === 'undefined') {
+      return;
+    }
+    this.observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && this.hasMore && !this.isLoading && !this.isLoadingMore) {
+          this.loadNextPage();
+        }
+      },
+      { rootMargin: '250px' }
+    );
+    this.observer.observe(el);
+  }
+
+  onSearchInput(val: string) {
+    this.searchSubject.next(val);
+  }
+
+  onPriceSliderChange(val: number) {
+    this.priceSubject.next(val);
+  }
+
+  onCategoryChange() {
+    this.selectedSubCategory = '';
+    this.resetAndLoad();
+  }
+
+  toggleDiscountOnly() {
+    this.discountOnly = !this.discountOnly;
+    this.resetAndLoad();
+  }
+
+  resetAndLoad() {
+    this.page = 1;
+    this.products = [];
+    this.hasMore = false;
+    this.fetchPage(true);
+  }
+
+  loadNextPage() {
+    if (!this.hasMore || this.isLoading || this.isLoadingMore) return;
+    this.page += 1;
+    this.fetchPage(false);
+  }
+
+  private fetchPage(reset: boolean) {
+    this.activeLoadSub?.unsubscribe();
+    if (reset) {
+      this.isLoading = true;
+    } else {
+      this.isLoadingMore = true;
+    }
+
+    this.activeLoadSub = this.productService.getProductsPaginated({
+      page: this.page,
+      limit: this.pageSize,
+      search: this.searchQuery,
+      category: this.selectedCategory || undefined,
+      subCategory: this.selectedSubCategory || undefined,
+      sort: this.sortBy,
+      discountOnly: this.discountOnly,
+      maxPrice: this.priceMax < this.maxPrice ? this.priceMax : undefined,
+      hideOutOfStock: true
+    }).subscribe({
+      next: (res) => {
+        if (reset) {
+          this.products = res.products || [];
+        } else {
+          const existingIds = new Set(this.products.map(p => p._id));
+          const fresh = (res.products || []).filter(p => !existingIds.has(p._id));
+          this.products = [...this.products, ...fresh];
+        }
+        this.totalProducts = res.total ?? this.products.length;
+        this.hasMore = !!res.hasMore;
+        this.isLoading = false;
+        this.isLoadingMore = false;
+      },
+      error: () => {
+        this.isLoading = false;
+        this.isLoadingMore = false;
       }
     });
   }
@@ -69,84 +186,6 @@ export class OurProducts implements OnInit {
     if (!this.selectedCategory) return [];
     const cat = this.categories.find(c => c._id === this.selectedCategory);
     return cat?.subCategories || [];
-  }
-
-  onCategoryChange() {
-    this.selectedSubCategory = '';
-  }
-
-  get filteredProducts(): Product[] {
-    let result = [...this.allProducts];
-
-    // Hide fully out-of-stock products unless searching
-    const isSearching = this.searchQuery.trim().length > 0;
-    if (!isSearching) {
-      result = result.filter(p => p.stock > 0);
-    }
-
-    // Search
-    if (isSearching) {
-      const q = this.searchQuery.trim().toLowerCase();
-      result = result.filter(p =>
-        p.name.en.toLowerCase().includes(q) ||
-        p.name.ar.includes(this.searchQuery.trim())
-      );
-    }
-
-    // Category (category can be a populated object or a string ID)
-    if (this.selectedCategory) {
-      result = result.filter(p => {
-        const catId = typeof p.category === 'object' ? (p.category as any)._id : p.category;
-        return catId === this.selectedCategory;
-      });
-    }
-
-    // SubCategory
-    if (this.selectedSubCategory) {
-      result = result.filter(p => p.subCategory === this.selectedSubCategory);
-    }
-
-    // Price range
-    result = result.filter(p => {
-      const minPrice = p.sizes?.length ? Math.min(...p.sizes.map(s => s.price)) : p.price;
-      return minPrice >= this.priceMin && minPrice <= this.priceMax;
-    });
-
-    // Discount filter
-    if (this.discountOnly) {
-      result = result.filter(p => p.discountPercentage && p.discountPercentage > 0);
-    }
-
-    // Sort
-    if (this.sortBy === 'name') {
-      result.sort((a, b) => {
-        const nameA = this.ts.currentLang() === 'ar' ? a.name.ar : a.name.en;
-        const nameB = this.ts.currentLang() === 'ar' ? b.name.ar : b.name.en;
-        return nameA.localeCompare(nameB);
-      });
-    } else if (this.sortBy === 'price-low') {
-      result.sort((a, b) => {
-        const pA = a.sizes?.length ? a.sizes[0].price : a.price;
-        const pB = b.sizes?.length ? b.sizes[0].price : b.price;
-        return pA - pB;
-      });
-    } else if (this.sortBy === 'price-high') {
-      result.sort((a, b) => {
-        const pA = a.sizes?.length ? a.sizes[0].price : a.price;
-        const pB = b.sizes?.length ? b.sizes[0].price : b.price;
-        return pB - pA;
-      });
-    } else if (this.sortBy === 'newest') {
-      result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }
-
-    return result;
-  }
-
-  getCategoryName(catId: string): string {
-    const cat = this.categories.find(c => c._id === catId);
-    if (!cat) return '';
-    return this.ts.localize(cat.name);
   }
 
   getDiscountedPrice(price: number, discount: number | undefined): number {
@@ -165,6 +204,19 @@ export class OurProducts implements OnInit {
     return size ? size.price : product.price;
   }
 
+  getQuickMaxStock(product: Product): number {
+    const size = this.getAvailableSize(product) || undefined;
+    return this.cartService.getEffectiveStock(product, size);
+  }
+
+  getInCartQty(product: Product): number {
+    const size = this.getAvailableSize(product) || undefined;
+    const item = this.cartService.getItems().find(
+      i => i.product._id === product._id && i.selectedSize?.label === size?.label
+    );
+    return item ? item.quantity : 0;
+  }
+
   addToCart(product: Product) {
     if (!this.authService.isLogin()) {
       this.toastService.show(
@@ -175,6 +227,7 @@ export class OurProducts implements OnInit {
       return;
     }
     const defaultSize = this.getAvailableSize(product) || undefined;
+    const maxStock = this.cartService.getEffectiveStock(product, defaultSize);
     const added = this.cartService.addToCart(product, defaultSize, 1);
     if (added) {
       this.toastService.show(
@@ -183,6 +236,42 @@ export class OurProducts implements OnInit {
           : `"${this.ts.localize(product.name)}" added to cart`,
         'success'
       );
+    } else {
+      this.toastService.show(
+        this.ts.currentLang() === 'ar'
+          ? `عذراً، الكمية المتاحة ${maxStock} فقط`
+          : `Sorry, only ${maxStock} available in stock`,
+        'error'
+      );
+    }
+  }
+
+  increaseQuickQty(product: Product) {
+    if (!this.authService.isLogin()) {
+      this.addToCart(product);
+      return;
+    }
+    const defaultSize = this.getAvailableSize(product) || undefined;
+    const currentQty = this.getInCartQty(product);
+    const maxStock = this.cartService.getEffectiveStock(product, defaultSize);
+    const ok = this.cartService.updateQuantity(product._id, defaultSize?.label, currentQty + 1);
+    if (!ok) {
+      this.toastService.show(
+        this.ts.currentLang() === 'ar'
+          ? `عذراً، الحد الأقصى المتاح ${maxStock} فقط`
+          : `Sorry, max available stock is ${maxStock}`,
+        'error'
+      );
+    }
+  }
+
+  decreaseQuickQty(product: Product) {
+    const defaultSize = this.getAvailableSize(product) || undefined;
+    const currentQty = this.getInCartQty(product);
+    if (currentQty <= 1) {
+      this.cartService.removeFromCart(product._id, defaultSize?.label);
+    } else {
+      this.cartService.updateQuantity(product._id, defaultSize?.label, currentQty - 1);
     }
   }
 
@@ -224,5 +313,7 @@ export class OurProducts implements OnInit {
     this.sortBy = 'name';
     this.priceMin = 0;
     this.priceMax = this.maxPrice;
+    this.discountOnly = false;
+    this.resetAndLoad();
   }
 }

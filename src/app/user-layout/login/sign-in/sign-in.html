@@ -2,53 +2,80 @@
   <div class="auth-card animate-fadeIn">
     <div class="auth-header">
       <div class="auth-logo">🛒</div>
-      <h1>{{ 'auth.login_title' | translate }}</h1>
+      <h1>{{ otpMode ? (ts.currentLang() === 'ar' ? 'تفعيل الحساب' : 'Verify Account') : ('auth.login_title' | translate) }}</h1>
+      @if (otpMode) {
+        <p style="text-align: center; color: var(--text-muted); margin-top: 8px; font-size: 13px;">
+          {{ ts.currentLang() === 'ar' ? 'أدخل رمز التحقق المرسل إلى ' : 'Enter the verification code sent to ' }}
+          <strong dir="ltr">{{ unverifiedEmail }}</strong>
+        </p>
+      }
     </div>
 
-    <form [formGroup]="form" (ngSubmit)="onSubmit()">
-      <div class="form-group">
-        <label class="form-label">{{ 'auth.email' | translate }}</label>
-        <input type="email" class="form-input" formControlName="email" dir="ltr"
-          autocomplete="email"
-          [placeholder]="ts.currentLang() === 'ar' ? 'example@email.com' : 'example@email.com'"
-          [class.error]="form.get('email')?.invalid && form.get('email')?.touched">
-        @if (form.get('email')?.touched && form.get('email')?.hasError('required')) {
-          <span class="form-error">{{ ts.currentLang() === 'ar' ? 'البريد الإلكتروني مطلوب' : 'Email is required' }}</span>
-        }
-        @if (form.get('email')?.touched && form.get('email')?.hasError('email') && !form.get('email')?.hasError('required')) {
-          <span class="form-error">{{ ts.currentLang() === 'ar' ? 'صيغة البريد غير صحيحة' : 'Invalid email format' }}</span>
-        }
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">{{ 'auth.password' | translate }}</label>
-        <div class="password-wrapper">
-          <input [type]="showPassword ? 'text' : 'password'" class="form-input" formControlName="password"
-            autocomplete="current-password"
-            [class.error]="form.get('password')?.invalid && form.get('password')?.touched">
-          <button type="button" class="toggle-pass" (click)="showPassword = !showPassword">
-            {{ showPassword ? '🙈' : '👁️' }}
-          </button>
+    @if (!otpMode) {
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <div class="form-group">
+          <label class="form-label">{{ 'auth.email' | translate }}</label>
+          <input type="email" class="form-input" formControlName="email" dir="ltr"
+            autocomplete="email"
+            [placeholder]="ts.currentLang() === 'ar' ? 'example@email.com' : 'example@email.com'"
+            [class.error]="form.get('email')?.invalid && form.get('email')?.touched">
+          @if (form.get('email')?.touched && form.get('email')?.hasError('required')) {
+            <span class="form-error">{{ ts.currentLang() === 'ar' ? 'البريد الإلكتروني مطلوب' : 'Email is required' }}</span>
+          }
+          @if (form.get('email')?.touched && form.get('email')?.hasError('email') && !form.get('email')?.hasError('required')) {
+            <span class="form-error">{{ ts.currentLang() === 'ar' ? 'صيغة البريد غير صحيحة' : 'Invalid email format' }}</span>
+          }
         </div>
-        @if (form.get('password')?.touched && form.get('password')?.hasError('required')) {
-          <span class="form-error">{{ ts.currentLang() === 'ar' ? 'كلمة المرور مطلوبة' : 'Password is required' }}</span>
-        }
-        @if (form.get('password')?.touched && form.get('password')?.hasError('minlength') && !form.get('password')?.hasError('required')) {
-          <span class="form-error">{{ ts.currentLang() === 'ar' ? 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' : 'Password must be at least 6 characters' }}</span>
-        }
+
+        <div class="form-group">
+          <label class="form-label">{{ 'auth.password' | translate }}</label>
+          <div class="password-wrapper">
+            <input [type]="showPassword ? 'text' : 'password'" class="form-input" formControlName="password"
+              autocomplete="current-password"
+              [class.error]="form.get('password')?.invalid && form.get('password')?.touched">
+            <button type="button" class="toggle-pass" (click)="showPassword = !showPassword">
+              {{ showPassword ? '🙈' : '👁️' }}
+            </button>
+          </div>
+          @if (form.get('password')?.touched && form.get('password')?.hasError('required')) {
+            <span class="form-error">{{ ts.currentLang() === 'ar' ? 'كلمة المرور مطلوبة' : 'Password is required' }}</span>
+          }
+          @if (form.get('password')?.touched && form.get('password')?.hasError('minlength') && !form.get('password')?.hasError('required')) {
+            <span class="form-error">{{ ts.currentLang() === 'ar' ? 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' : 'Password must be at least 6 characters' }}</span>
+          }
+        </div>
+
+        <a routerLink="/login/forgot-password" queryParamsHandling="preserve" class="forgot-link">{{ 'auth.forgot_password' | translate }}</a>
+
+        <button type="submit" class="btn btn-primary btn-lg submit-btn" [disabled]="isLoading">
+          @if (isLoading) { <span class="spinner"></span> }
+          {{ 'auth.login_btn' | translate }}
+        </button>
+      </form>
+
+      <p class="auth-footer">
+        {{ 'auth.no_account' | translate }}
+        <a routerLink="/login/signup" queryParamsHandling="preserve">{{ 'auth.signup_btn' | translate }}</a>
+      </p>
+    } @else {
+      <div style="text-align: center; margin-top: 12px;">
+        <div class="form-group">
+          <input type="text" class="form-input" [(ngModel)]="otpCode" maxlength="6" placeholder="123456" dir="ltr"
+            (keyup.enter)="verifyUnverifiedAccount()"
+            style="font-size: 24px; text-align: center; letter-spacing: 6px; padding: 14px;">
+        </div>
+        <button type="button" class="btn btn-primary btn-lg submit-btn" style="width: 100%; margin-bottom: 12px;"
+          (click)="verifyUnverifiedAccount()" [disabled]="!otpCode || otpCode.trim().length < 5 || verifying">
+          @if (verifying) { <span class="spinner"></span> }
+          {{ verifying ? (ts.currentLang() === 'ar' ? 'جاري التحقق...' : 'Verifying...') : (ts.currentLang() === 'ar' ? 'تفعيل وتسجيل الدخول' : 'Verify & Sign In') }}
+        </button>
+        <button type="button" class="btn btn-ghost" style="width: 100%; margin-bottom: 8px;" (click)="resendVerificationCode()" [disabled]="resending">
+          {{ resending ? '...' : (ts.currentLang() === 'ar' ? 'إعادة إرسال كود التفعيل' : 'Resend Verification Code') }}
+        </button>
+        <button type="button" class="btn btn-ghost" style="width: 100%; color: var(--text-muted);" (click)="otpMode = false">
+          {{ ts.currentLang() === 'ar' ? 'العودة لتسجيل الدخول' : 'Back to Sign In' }}
+        </button>
       </div>
-
-      <a routerLink="/login/forgot-password" queryParamsHandling="preserve" class="forgot-link">{{ 'auth.forgot_password' | translate }}</a>
-
-      <button type="submit" class="btn btn-primary btn-lg submit-btn" [disabled]="isLoading">
-        @if (isLoading) { <span class="spinner"></span> }
-        {{ 'auth.login_btn' | translate }}
-      </button>
-    </form>
-
-    <p class="auth-footer">
-      {{ 'auth.no_account' | translate }}
-      <a routerLink="/login/signup" queryParamsHandling="preserve">{{ 'auth.signup_btn' | translate }}</a>
-    </p>
+    }
   </div>
 </div>

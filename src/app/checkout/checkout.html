@@ -107,27 +107,75 @@
                   }
                 </div>
                 <span class="si-price">
-                  {{ formatPrice((item.selectedSize ? item.selectedSize.price : item.product.price) * item.quantity) }}
+                  {{ formatPrice(getItemFinalPrice(item)) }}
                   <small>{{ 'product.egp' | translate }}</small>
                 </span>
               </div>
             }
           </div>
+
+          <!-- Promo Code -->
+          <div class="promo-box">
+            @if (!appliedCoupon) {
+              <div class="promo-input-row">
+                <input type="text" class="form-input promo-input" [(ngModel)]="couponInput"
+                  (keyup.enter)="applyCoupon()"
+                  [placeholder]="ts.currentLang() === 'ar' ? 'أدخل كود الخصم...' : 'Enter promo code...'"
+                  [disabled]="validatingCoupon">
+                <button type="button" class="btn btn-outline promo-apply-btn" (click)="applyCoupon()" [disabled]="validatingCoupon || !couponInput.trim()">
+                  {{ validatingCoupon ? '...' : (ts.currentLang() === 'ar' ? 'تطبيق' : 'Apply') }}
+                </button>
+              </div>
+            } @else {
+              <div class="promo-applied-badge">
+                <div class="promo-applied-info">
+                  <span>🎟️ <strong>{{ appliedCoupon.code }}</strong></span>
+                  <small class="text-success">-{{ formatPrice(appliedCoupon.discountAmount) }} {{ 'product.egp' | translate }}</small>
+                </div>
+                <button type="button" class="promo-remove-btn" (click)="removeCoupon()">✕</button>
+              </div>
+            }
+          </div>
+
+          <!-- Free Shipping Hint -->
+          @if (freeShippingThreshold > 0) {
+            <div class="free-shipping-hint" [class.reached]="remainingForFreeShipping === 0">
+              @if (remainingForFreeShipping === 0) {
+                <span>🎉 {{ ts.currentLang() === 'ar' ? 'تهانينا! لقد حصلت على شحن مجاني' : 'Congrats! You unlocked Free Shipping' }}</span>
+              } @else {
+                <span>🚚 {{ ts.currentLang() === 'ar'
+                  ? ('أضف منتجات بقيمة ' + formatPrice(remainingForFreeShipping) + ' ج.م للحصول على شحن مجاني!')
+                  : ('Add ' + formatPrice(remainingForFreeShipping) + ' EGP more for Free Shipping!') }}</span>
+              }
+            </div>
+          }
           
           <div class="summary-costs">
             <div class="cost-line">
               <span>{{ 'cart.total' | translate }}</span>
               <span>{{ formatPrice(cartService.cartTotal) }} <small>{{ 'product.egp' | translate }}</small></span>
             </div>
+            @if (appliedCoupon && couponDiscount > 0) {
+              <div class="cost-line text-success">
+                <span>{{ ts.currentLang() === 'ar' ? 'خصم الكوبون' : 'Promo Discount' }} ({{ appliedCoupon.code }})</span>
+                <span>-{{ formatPrice(couponDiscount) }} <small>{{ 'product.egp' | translate }}</small></span>
+              </div>
+            }
             <div class="cost-line">
-              <span>{{ ts.currentLang() === 'ar' ? 'الشحن' : 'Shipping' }}</span>
-              <span class="text-success">{{ ts.currentLang() === 'ar' ? 'مجاني' : 'Free' }}</span>
+              <span>{{ ts.currentLang() === 'ar' ? 'مصاريف الشحن' : 'Shipping' }}</span>
+              @if (!governorate) {
+                <span class="text-muted">{{ ts.currentLang() === 'ar' ? 'اختر المحافظة' : 'Select governorate' }}</span>
+              } @else if (shippingFee === 0) {
+                <span class="text-success">{{ ts.currentLang() === 'ar' ? 'مجاني' : 'Free' }}</span>
+              } @else {
+                <span>{{ formatPrice(shippingFee) }} <small>{{ 'product.egp' | translate }}</small></span>
+              }
             </div>
           </div>
 
           <div class="summary-total">
             <span>{{ ts.currentLang() === 'ar' ? 'الإجمالي النهائي' : 'Final Total' }}</span>
-            <span class="total-price">{{ formatPrice(cartService.cartTotal) }} <small>{{ 'product.egp' | translate }}</small></span>
+            <span class="total-price">{{ formatPrice(finalTotal) }} <small>{{ 'product.egp' | translate }}</small></span>
           </div>
           
           <button class="btn btn-primary btn-lg place-order-btn" (click)="placeOrder()" [disabled]="isProcessing">
